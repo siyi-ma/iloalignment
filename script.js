@@ -4,6 +4,12 @@ function generateReport(results) {
     const reportContainer = document.getElementById('report-container');
     reportContainer.innerHTML = '';
     
+    // Remove Home button if on the landing page
+    const homeButton = document.getElementById('home-button');
+    if (homeButton && isLandingPage()) {
+        homeButton.style.display = 'none';
+    }
+    
     // Course info section
     const course = currentCourses[0];
     const reportHeader = document.createElement('div');
@@ -109,4 +115,9 @@ function generateReport(results) {
     
     // Show report section
     showSection('report-section');
+}
+
+// Helper function to determine if the current page is the landing page
+function isLandingPage() {
+    return window.location.pathname === '/'; // Adjust the path as needed
 }
