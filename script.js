@@ -152,26 +152,32 @@ function populateCourseCodeDatalist() {
         // Clear existing options
         courseCodesDatalist.innerHTML = '';
         
-        // Get unique course codes
-        const uniqueCourseCodes = [...new Set(courseData.map(course => course.ainekood))];
+        // Get unique course codes with their corresponding names
+        const uniqueCourses = [];
+        courseData.forEach(course => {
+            if (!uniqueCourses.some(c => c.code === course.ainekood)) {
+                uniqueCourses.push({
+                    code: course.ainekood,
+                    name: course.oppeainenimetusik
+                });
+            }
+        });
         
-        // Sort alphabetically
-        uniqueCourseCodes.sort();
+        // Sort alphabetically by code
+        uniqueCourses.sort((a, b) => a.code.localeCompare(b.code));
         
         // Add options to datalist
-        uniqueCourseCodes.forEach(code => {
-            // Find the course to get its name
-            const course = courseData.find(c => c.ainekood === code);
+        uniqueCourses.forEach(course => {
             const optionElement = document.createElement('option');
-            optionElement.value = code;
+            optionElement.value = course.code;
             // Add the course name as the label if available
-            if (course && course.oppeainenimetusik) {
-                optionElement.text = `${code} - ${course.oppeainenimetusik}`;
+            if (course.name) {
+                optionElement.text = `${course.code} - ${course.name}`;
             }
             courseCodesDatalist.appendChild(optionElement);
         });
         
-        console.log(`Populated autocomplete with ${uniqueCourseCodes.length} course codes`);
+        console.log(`Populated autocomplete with ${uniqueCourses.length} course codes`);
     } else {
         console.error('Course codes datalist element not found');
     }
@@ -230,7 +236,7 @@ function setupEventListeners() {
             }
         });
         
-        // Input event for real-time validation
+        // Input event for real-time validation and filtering autocomplete
         courseCodeInput.addEventListener('input', function() {
             const value = this.value.trim().toUpperCase();
             
@@ -247,28 +253,81 @@ function setupEventListeners() {
             if (searchBtn) {
                 searchBtn.disabled = !value;
             }
+            
+            // Update autocomplete options based on current input
+            updateAutocompleteOptions(value);
         });
     }
+}
+
+// Update autocomplete options based on user input
+function updateAutocompleteOptions(input) {
+    if (!input) return;
+    
+    const courseCodesDatalist = document.getElementById('course-codes-list');
+    if (!courseCodesDatalist) return;
+    
+    // Clear existing options
+    courseCodesDatalist.innerHTML = '';
+    
+    // Filter courses that match the input (starting with the input)
+    const matchingCourses = courseData.filter(course => 
+        course.ainekood.startsWith(input) || 
+        course.oppeainenimetusik.toUpperCase().includes(input)
+    );
+    
+    // Get unique matches
+    const uniqueMatches = [];
+    matchingCourses.forEach(course => {
+        if (!uniqueMatches.some(c => c.ainekood === course.ainekood)) {
+            uniqueMatches.push(course);
+        }
+    });
+    
+    // Sort matches
+    uniqueMatches.sort((a, b) => a.ainekood.localeCompare(b.ainekood));
+    
+    // Limit to top matches
+    const topMatches = uniqueMatches.slice(0, 10);
+    
+    // Add filtered options to datalist
+    topMatches.forEach(course => {
+        const optionElement = document.createElement('option');
+        optionElement.value = course.ainekood;
+        if (course.oppeainenimetusik) {
+            optionElement.text = `${course.ainekood} - ${course.oppeainenimetusik}`;
+        }
+        courseCodesDatalist.appendChild(optionElement);
+    });
+    
+    console.log(`Updated autocomplete with ${topMatches.length} matches for "${input}"`);
 }
 
 // Update the performAnalysis function
 function performAnalysis() {
     console.log('performAnalysis called'); // Debug log
-
+    console.log('Current CLOs:', currentCLOs); // Debug log for CLOs
+    console.log('Current MLOs count:', currentMLOs ? currentMLOs.length : 0); // Debug log for MLOs count
+    
     // Validate prerequisites
     if (!currentCLOs || currentCLOs.length === 0) {
+        console.error('CLOs array is empty or null:', currentCLOs);
         alert('Please add at least one Course Learning Outcome.');
         console.log('Analysis stopped: No CLOs found'); // Debug log
         return;
     }
 
     if (!currentMLOs || currentMLOs.length === 0) {
+        console.error('MLOs array is empty or null:', currentMLOs);
         alert('No Module Learning Outcomes available for analysis.');
         console.log('Analysis stopped: No MLOs found'); // Debug log
         return;
     }
 
     try {
+        console.log(`Starting analysis with ${currentCLOs.length} CLOs and ${currentMLOs.length} MLOs`);
+        console.log('CLO content sample:', currentCLOs.slice(0, 2)); // Show first few CLOs
+        
         // Perform the analysis
         const analysisResults = analyzeAlignment();
         console.log('Analysis completed', analysisResults); // Debug log
@@ -278,23 +337,35 @@ function performAnalysis() {
         
         // Show analysis section
         showSection('alignment-analysis');
+        console.log('Showing alignment analysis section');
         
         // Generate and display report
         generateReport(analysisResults);
+        console.log('Report generated');
 
         // Enable export button
         const exportBtn = document.getElementById('export-report-btn');
         if (exportBtn) {
             exportBtn.disabled = false;
+            console.log('Export button enabled');
         }
     } catch (error) {
         console.error('Error in analysis:', error); // Debug log
+        console.error('Error stack:', error.stack); // Add stack trace for better debugging
         showError('An error occurred during analysis. Please try again.');
     }
 }
 
 // Search for a course by code
 function searchCourse() {
+    console.log("searchCourse function called"); // Debug log
+
+    // Hide all sections first to reset the view
+    document.querySelectorAll('section').forEach(section => {
+        section.classList.add('hidden-section');
+        section.classList.remove('active-section');
+    });
+    
     const courseCodeInput = document.getElementById('course-code');
     
     // Get the value directly from the input field
@@ -310,20 +381,30 @@ function searchCourse() {
     // Check if the course code is empty
     if (!courseCode) {
         validationMessage.textContent = 'Please enter a course code.';
+        // Keep course input section visible
+        document.getElementById('course-input').classList.remove('hidden-section');
+        document.getElementById('course-input').classList.add('active-section');
         return;
     }
     
     // Validate course code format (3 letters followed by 4 digits)
     if (!isValidCourseCode(courseCode)) {
         validationMessage.textContent = 'Invalid course code. Please enter 3 letters followed by 4 digits (e.g., EKX0040).';
+        // Keep course input section visible
+        document.getElementById('course-input').classList.remove('hidden-section');
+        document.getElementById('course-input').classList.add('active-section');
         return;
     }
     
     // Find course in data
     const foundCourses = courseData.filter(course => course.ainekood === courseCode);
+    console.log(`Found ${foundCourses.length} courses matching code ${courseCode}:`, foundCourses); // Debug log
     
     if (foundCourses.length === 0) {
         validationMessage.textContent = 'Course not found. Please check the course code and try again.';
+        // Keep course input section visible
+        document.getElementById('course-input').classList.remove('hidden-section');
+        document.getElementById('course-input').classList.add('active-section');
         return;
     }
     
@@ -333,14 +414,56 @@ function searchCourse() {
     // Store all found courses
     currentCourses = foundCourses;
     
-    // Display course information
-    displayCourseInfo(currentCourses);
-    
-    // Retrieve and display MLOs for all module codes
-    retrieveMLOs(currentCourses);
-    
-    // Show options panel
-    showSection('options-panel');
+    try {
+        // Make the course input section visible again (in case of error)
+        document.getElementById('course-input').classList.remove('hidden-section');
+        document.getElementById('course-input').classList.add('active-section');
+        
+        // Display course information
+        displayCourseInfo(currentCourses);
+        console.log("After displayCourseInfo call"); // Debug log
+        
+        // Retrieve and display MLOs for all module codes
+        retrieveMLOs(currentCourses);
+        console.log("After retrieveMLOs call"); // Debug log
+        
+        // Make all relevant sections visible - do this explicitly
+        const courseInfoSection = document.getElementById('course-info');
+        if (courseInfoSection) {
+            courseInfoSection.classList.remove('hidden-section');
+            courseInfoSection.classList.add('active-section');
+            console.log("Course info section made visible manually"); // Debug log
+        }
+        
+        const mloDisplaySection = document.getElementById('mlo-display');
+        if (mloDisplaySection) {
+            mloDisplaySection.classList.remove('hidden-section');
+            mloDisplaySection.classList.add('active-section');
+            console.log("MLO display section made visible manually"); // Debug log
+        }
+        
+        const optionsPanel = document.getElementById('options-panel');
+        if (optionsPanel) {
+            optionsPanel.classList.remove('hidden-section');
+            optionsPanel.classList.add('active-section');
+            console.log("Options panel made visible manually"); // Debug log
+        }
+        
+        // Log the DOM state for debugging
+        console.log("Course sections visibility check:", 
+            "course-input:", !document.getElementById('course-input').classList.contains('hidden-section'),
+            "course-info:", !document.getElementById('course-info').classList.contains('hidden-section'),
+            "mlo-display:", !document.getElementById('mlo-display').classList.contains('hidden-section'),
+            "options-panel:", !document.getElementById('options-panel').classList.contains('hidden-section')
+        );
+    } catch (error) {
+        console.error("Error in search process:", error); // Debug log
+        showError("An error occurred during the search process. Please try again.");
+        
+        // Ensure the course input section is visible in case of error
+        document.getElementById('course-input').classList.remove('hidden-section');
+        document.getElementById('course-input').classList.add('active-section');
+    }
 }
 
 // Validate course code format (3 letters followed by 4 digits)
@@ -356,23 +479,52 @@ function isValidCourseCode(code) {
 
 // Display course information
 function displayCourseInfo(courses) {
+    console.log("displayCourseInfo called with courses:", courses); // Debug log
+    
+    // Check if courses array is not empty
+    if (!courses || courses.length === 0) {
+        console.error("No courses provided to displayCourseInfo");
+        return;
+    }
+    
     // Use the first course for common information
     const course = courses[0];
+    console.log("Using course:", course); // Debug log
     
-    document.getElementById('display-course-code').textContent = course.ainekood;
-    document.getElementById('course-name-en').textContent = course.oppeainenimetusik;
-    document.getElementById('course-name-et').textContent = course.oppeainenimetusek;
-    document.getElementById('course-credits').textContent = course.eap;
+    // Check if all required elements exist before setting their content
+    const elements = {
+        'display-course-code': course.ainekood,
+        'course-name-en': course.oppeainenimetusik,
+        'course-name-et': course.oppeainenimetusek,
+        'course-credits': course.eap
+    };
+    
+    // Set text content for each element if it exists
+    Object.entries(elements).forEach(([id, value]) => {
+        const element = document.getElementById(id);
+        if (element) {
+            element.textContent = value;
+            console.log(`Set ${id} to ${value}`); // Debug log
+        } else {
+            console.error(`Element not found: ${id}`);
+        }
+    });
     
     // Get all unique module codes
     const moduleCodes = [...new Set(courses.map(c => c.moodlikood))];
+    console.log("Module codes:", moduleCodes); // Debug log
     
     // Get module names for each module code
     const moduleInfos = moduleCodes.map(code => {
-        const moduleMLO = mloData.find(mlo => mlo.moodlikood === code);
-        if (moduleMLO) {
+        const moduleMLOs = mloData.filter(mlo => mlo.moodlikood === code);
+        console.log(`Found ${moduleMLOs.length} MLOs for module ${code}`); // Debug log
+        
+        if (moduleMLOs.length > 0) {
+            // Use the first MLO to get the module name
+            const moduleMLO = moduleMLOs[0];
             // Extract module name from oisnimetus
             const fullName = moduleMLO.oisnimetus;
+            
             // Find the module code in the oisnimetus (e.g., "E1", "P2")
             const codeMatch = code.match(/([a-z]+)(\d*)/i);
             if (codeMatch && codeMatch.length > 2) {
@@ -405,8 +557,15 @@ function displayCourseInfo(courses) {
         };
     });
     
+    console.log("Module infos:", moduleInfos); // Debug log
+    
     // Create HTML for module codes and names
     const moduleCodeElement = document.getElementById('module-code');
+    if (!moduleCodeElement) {
+        console.error("Module code element not found");
+        return;
+    }
+    
     moduleCodeElement.innerHTML = '';
     
     // If there's only one module, display it as text
@@ -424,6 +583,7 @@ function displayCourseInfo(courses) {
     
     // Show course info section
     showSection('course-info');
+    console.log("Course info section should be visible now"); // Debug log
     
     // Show options panel
     showSection('options-panel');
@@ -431,13 +591,24 @@ function displayCourseInfo(courses) {
 
 // Retrieve MLOs based on module codes from all courses
 function retrieveMLOs(courses) {
+    console.log("retrieveMLOs called with courses:", courses); // Debug log
+    
+    // Check if courses array is valid
+    if (!courses || courses.length === 0) {
+        console.error("No courses provided to retrieveMLOs");
+        return;
+    }
+    
     // Get all unique module codes
     const moduleCodes = [...new Set(courses.map(c => c.moodlikood))];
+    console.log("Module codes to search for MLOs:", moduleCodes); // Debug log
     
     // Filter MLOs by all module codes
     currentMLOs = [];
     moduleCodes.forEach(moduleCode => {
         const moduleMLOs = mloData.filter(mlo => mlo.moodlikood === moduleCode);
+        console.log(`Found ${moduleMLOs.length} MLOs for module code: ${moduleCode}`); // Debug log
+        
         // Add module code information to each MLO for display purposes
         moduleMLOs.forEach(mlo => {
             mlo.moduleCode = moduleCode;
@@ -445,13 +616,22 @@ function retrieveMLOs(courses) {
         currentMLOs = currentMLOs.concat(moduleMLOs);
     });
     
+    console.log(`Total MLOs found: ${currentMLOs.length}`); // Debug log
+    
     // Display MLOs
     displayMLOs(currentMLOs);
 }
 
 // Display MLOs
 function displayMLOs(mlos) {
+    console.log("displayMLOs called with", mlos.length, "MLOs"); // Debug log
+    
     const mloContainer = document.getElementById('mlo-container');
+    if (!mloContainer) {
+        console.error("MLO container element not found");
+        return;
+    }
+    
     mloContainer.innerHTML = '';
     
     if (mlos.length === 0) {
@@ -469,9 +649,12 @@ function displayMLOs(mlos) {
         moduleGroups[mlo.moduleCode].push(mlo);
     });
     
+    console.log("Grouped MLOs by module code:", Object.keys(moduleGroups)); // Debug log
+    
     // Create a section for each module
     Object.keys(moduleGroups).forEach(moduleCode => {
         const moduleMLOs = moduleGroups[moduleCode];
+        console.log(`Creating section for module ${moduleCode} with ${moduleMLOs.length} MLOs`); // Debug log
         
         // Get module name from the first MLO's oisnimetus
         const moduleName = moduleMLOs[0].oisnimetus;
@@ -516,6 +699,7 @@ function displayMLOs(mlos) {
     
     // Show MLO display section
     showSection('mlo-display');
+    console.log("MLO display section should be visible now"); // Debug log
 }
 
 // Reset to search view
@@ -584,10 +768,10 @@ function addCLOToDisplay(cloText) {
     cloItem.className = 'clo-item';
     cloItem.innerHTML = `
         <div class="clo-text">
-            <strong>CLO ${index}:</strong> ${cloText}
+            <strong>CLO ${index + 1}:</strong> ${cloText}
         </div>
         <div class="clo-actions">
-            <button class="remove-clo" onclick="removeCLO(${index - 1})"><i class="fas fa-trash"></i></button>
+            <button class="remove-clo" onclick="removeCLO(${index})"><i class="fas fa-trash"></i></button>
         </div>
     `;
     
@@ -596,6 +780,8 @@ function addCLOToDisplay(cloText) {
 
 // Remove a CLO from the list
 function removeCLO(index) {
+    console.log(`Removing CLO at index: ${index}`);
+    
     // Remove from array
     currentCLOs.splice(index, 1);
     
@@ -603,14 +789,18 @@ function removeCLO(index) {
     const cloList = document.getElementById('clo-list');
     cloList.innerHTML = '';
     
-    // Rebuild display
-    currentCLOs.forEach(clo => {
+    // Rebuild display with corrected indices
+    currentCLOs.forEach((clo, i) => {
         addCLOToDisplay(clo);
     });
+    
+    console.log(`After removal, current CLOs: ${currentCLOs.length}`);
 }
 
 // Show a specific section and hide others
 function showSection(sectionId) {
+    console.log(`Showing section: ${sectionId}`); // Debug log
+    
     // Hide all sections
     document.querySelectorAll('section').forEach(section => {
         section.classList.add('hidden-section');
@@ -622,6 +812,9 @@ function showSection(sectionId) {
     if (targetSection) {
         targetSection.classList.remove('hidden-section');
         targetSection.classList.add('active-section');
+        console.log(`Section ${sectionId} visible: ${!targetSection.classList.contains('hidden-section')}`); // Debug log
+    } else {
+        console.error(`Section element not found: ${sectionId}`); // Debug log
     }
 }
 
@@ -848,7 +1041,7 @@ function generateReport(results) {
             </tr>
             ${results.map(result => `
                 <tr>
-                    <td>${result.clo}</td>
+                    <td>CLO ${result.cloIndex + 1}: ${result.clo}</td>
                     <td>${result.mlo}</td>
                     <td class="score-${result.score}">${result.score}/5</td>
                     <td>${result.reason} ${result.suggestion ? `<br><em>${result.suggestion}</em>` : ''}</td>
