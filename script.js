@@ -567,19 +567,14 @@ function displayCourseInfo(courses) {
     }
     
     moduleCodeElement.innerHTML = '';
-    
-    // If there's only one module, display it as text
-    if (moduleInfos.length === 1) {
-        moduleCodeElement.textContent = `${moduleInfos[0].code} - ${moduleInfos[0].name}`;
-    } else {
-        // If there are multiple modules, display each on a new line
-        moduleInfos.forEach(moduleInfo => {
-            const moduleDiv = document.createElement('div');
-            moduleDiv.className = 'module-info-item';
-            moduleDiv.textContent = `${moduleInfo.code} - ${moduleInfo.name}`;
-            moduleCodeElement.appendChild(moduleDiv);
-        });
-    }
+
+    // Display each module code and name
+    moduleInfos.forEach(moduleInfo => {
+        const moduleDiv = document.createElement('div');
+        moduleDiv.className = 'module-info-item';
+        moduleDiv.textContent = `${moduleInfo.code} - ${moduleInfo.name}`;
+        moduleCodeElement.appendChild(moduleDiv);
+    });
     
     // Show course info section
     showSection('course-info');
