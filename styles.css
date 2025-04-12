@@ -37,8 +37,15 @@ header {
     padding: 20px;
     border-radius: var(--border-radius);
     margin-bottom: 30px;
-    text-align: center;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     box-shadow: var(--shadow);
+}
+
+.header-content {
+    text-align: center;
+    flex: 1;
 }
 
 header h1 {
@@ -49,6 +56,29 @@ header h1 {
 header p {
     font-size: 1.2rem;
     opacity: 0.9;
+}
+
+.home-btn {
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    transition: background-color 0.3s;
+}
+
+.home-btn:hover {
+    background-color: #c8066f;
+}
+
+.home-btn i {
+    font-size: 1.2rem;
 }
 
 /* Section Styles */
@@ -148,6 +178,11 @@ button:hover {
 
 .value {
     font-size: 1.1rem;
+}
+
+.module-info-item {
+    margin-bottom: 5px;
+    padding: 3px 0;
 }
 
 /* MLO Display Styles */
@@ -323,6 +358,7 @@ textarea:focus {
     display: flex;
     gap: 15px;
     justify-content: center;
+    align-items: stretch; /* Make buttons the same height */
 }
 
 #modify-suggestions-btn {
@@ -425,6 +461,7 @@ textarea:focus {
     padding: 12px 15px;
     text-align: left;
     border-bottom: 1px solid var(--secondary-color);
+    vertical-align: top; /* Align content to the top */
 }
 
 .report-table th {

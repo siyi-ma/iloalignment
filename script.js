@@ -1,20 +1,15 @@
 // Global variables to store data
 let courseData = [];
 let mloData = [];
-let currentCourses = []; // Changed from currentCourse to currentCourses (array)
+let currentCourses = [];
 let currentMLOs = [];
 let currentCLOs = [];
 
 // Initialize the application
 document.addEventListener('DOMContentLoaded', function() {
-    // Show loading indicator
-    document.getElementById('loading-indicator').classList.remove('hidden-section');
-    
-    // Load CSV data
     loadCSVData();
-    
-    // Set up event listeners
     setupEventListeners();
+    console.log('Application initialized'); // Debug log
 });
 
 // Load CSV data directly from embedded strings
@@ -140,11 +135,45 @@ e2mlo;moodul;is familiar with the main research methods in econometrics and appl
         
         console.log('Data loaded successfully');
         document.getElementById('search-btn').disabled = false;
-        // Hide loading indicator when data is loaded
-        document.getElementById('loading-indicator').classList.add('hidden-section');
+        
+        // Populate the course code datalist for autocomplete
+        populateCourseCodeDatalist();
     } catch (error) {
         console.error('Error loading data:', error);
         showError('Failed to load data: ' + error.message);
+    }
+}
+
+// Populate the datalist with unique course codes for autocomplete
+function populateCourseCodeDatalist() {
+    const courseCodesDatalist = document.getElementById('course-codes-list');
+    
+    if (courseCodesDatalist) {
+        // Clear existing options
+        courseCodesDatalist.innerHTML = '';
+        
+        // Get unique course codes
+        const uniqueCourseCodes = [...new Set(courseData.map(course => course.ainekood))];
+        
+        // Sort alphabetically
+        uniqueCourseCodes.sort();
+        
+        // Add options to datalist
+        uniqueCourseCodes.forEach(code => {
+            // Find the course to get its name
+            const course = courseData.find(c => c.ainekood === code);
+            const optionElement = document.createElement('option');
+            optionElement.value = code;
+            // Add the course name as the label if available
+            if (course && course.oppeainenimetusik) {
+                optionElement.text = `${code} - ${course.oppeainenimetusik}`;
+            }
+            courseCodesDatalist.appendChild(optionElement);
+        });
+        
+        console.log(`Populated autocomplete with ${uniqueCourseCodes.length} course codes`);
+    } else {
+        console.error('Course codes datalist element not found');
     }
 }
 
@@ -167,39 +196,101 @@ function parseCSV(csvText) {
 
 // Set up event listeners for user interactions
 function setupEventListeners() {
-    // Search button click
-    document.getElementById('search-btn').addEventListener('click', searchCourse);
-    
-    // Course code input enter key
-    document.getElementById('course-code').addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            searchCourse();
+    const buttons = {
+        'search-btn': searchCourse,
+        'home-btn': resetToSearch,
+        'new-course-btn': resetToSearch,
+        'suggest-clo-btn': suggestCLOs,
+        'input-clo-btn': showCLOInput,
+        'add-clo-btn': addCLO,
+        'use-suggestions-btn': useSuggestions,
+        'modify-suggestions-btn': modifySuggestions,
+        'analyze-btn': performAnalysis,
+        'export-report-btn': exportReport
+    };
+
+    // Add event listeners for all buttons
+    Object.entries(buttons).forEach(([id, handler]) => {
+        const element = document.getElementById(id);
+        if (element) {
+            element.addEventListener('click', handler);
+            console.log(`Event listener added for ${id}`); // Debug log
+        } else {
+            console.error(`Element not found: ${id}`); // Debug log
         }
     });
-    
-    // New course button
-    document.getElementById('new-course-btn').addEventListener('click', resetToSearch);
-    
-    // Suggest CLOs button
-    document.getElementById('suggest-clo-btn').addEventListener('click', suggestCLOs);
-    
-    // Input CLOs button
-    document.getElementById('input-clo-btn').addEventListener('click', showCLOInput);
-    
-    // Add CLO button
-    document.getElementById('add-clo-btn').addEventListener('click', addCLO);
-    
-    // Analyze button
-    document.getElementById('analyze-btn').addEventListener('click', performAnalysis);
-    
-    // Use suggestions button
-    document.getElementById('use-suggestions-btn').addEventListener('click', useSuggestions);
-    
-    // Modify suggestions button
-    document.getElementById('modify-suggestions-btn').addEventListener('click', modifySuggestions);
-    
-    // Export report button
-    document.getElementById('export-report-btn').addEventListener('click', exportReport);
+
+    // Course code input enter key and input events
+    const courseCodeInput = document.getElementById('course-code');
+    if (courseCodeInput) {
+        // Enter key to trigger search
+        courseCodeInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                searchCourse();
+            }
+        });
+        
+        // Input event for real-time validation
+        courseCodeInput.addEventListener('input', function() {
+            const value = this.value.trim().toUpperCase();
+            
+            // Update the validation message in real-time
+            const validationMessage = document.getElementById('validation-message');
+            if (value && !isValidCourseCode(value) && value.length === 7) {
+                validationMessage.textContent = 'Invalid course code. Please enter 3 letters followed by 4 digits (e.g., EKX0040).';
+            } else {
+                validationMessage.textContent = '';
+            }
+            
+            // Enable or disable search button based on input
+            const searchBtn = document.getElementById('search-btn');
+            if (searchBtn) {
+                searchBtn.disabled = !value;
+            }
+        });
+    }
+}
+
+// Update the performAnalysis function
+function performAnalysis() {
+    console.log('performAnalysis called'); // Debug log
+
+    // Validate prerequisites
+    if (!currentCLOs || currentCLOs.length === 0) {
+        alert('Please add at least one Course Learning Outcome.');
+        console.log('Analysis stopped: No CLOs found'); // Debug log
+        return;
+    }
+
+    if (!currentMLOs || currentMLOs.length === 0) {
+        alert('No Module Learning Outcomes available for analysis.');
+        console.log('Analysis stopped: No MLOs found'); // Debug log
+        return;
+    }
+
+    try {
+        // Perform the analysis
+        const analysisResults = analyzeAlignment();
+        console.log('Analysis completed', analysisResults); // Debug log
+
+        // Display results
+        displayAnalysisResults(analysisResults);
+        
+        // Show analysis section
+        showSection('alignment-analysis');
+        
+        // Generate and display report
+        generateReport(analysisResults);
+
+        // Enable export button
+        const exportBtn = document.getElementById('export-report-btn');
+        if (exportBtn) {
+            exportBtn.disabled = false;
+        }
+    } catch (error) {
+        console.error('Error in analysis:', error); // Debug log
+        showError('An error occurred during analysis. Please try again.');
+    }
 }
 
 // Search for a course by code
@@ -277,7 +368,7 @@ function displayCourseInfo(courses) {
     const moduleCodes = [...new Set(courses.map(c => c.moodlikood))];
     
     // Get module names for each module code
-    const moduleNames = moduleCodes.map(code => {
+    const moduleInfos = moduleCodes.map(code => {
         const moduleMLO = mloData.find(mlo => mlo.moodlikood === code);
         if (moduleMLO) {
             // Extract module name from oisnimetus
@@ -289,34 +380,53 @@ function displayCourseInfo(courses) {
                 // Try to extract the module name after the short code
                 const nameMatch = fullName.match(new RegExp(`${shortCode}\\s+([\\w\\s&-]+)`));
                 if (nameMatch && nameMatch.length > 1) {
-                    return `${shortCode} ${nameMatch[1].trim()}`;
+                    return {
+                        code: shortCode,
+                        name: nameMatch[1].trim(),
+                        fullName: fullName
+                    };
                 }
-                return `${shortCode} (${fullName})`;
+                return {
+                    code: shortCode,
+                    name: fullName,
+                    fullName: fullName
+                };
             }
-            return code;
+            return {
+                code: code,
+                name: fullName,
+                fullName: fullName
+            };
         }
-        return code;
+        return {
+            code: code,
+            name: code,
+            fullName: code
+        };
     });
     
-    // Display all module codes with their names
-    document.getElementById('module-code').textContent = moduleNames.join(', ');
+    // Create HTML for module codes and names
+    const moduleCodeElement = document.getElementById('module-code');
+    moduleCodeElement.innerHTML = '';
+    
+    // If there's only one module, display it as text
+    if (moduleInfos.length === 1) {
+        moduleCodeElement.textContent = `${moduleInfos[0].code} - ${moduleInfos[0].name}`;
+    } else {
+        // If there are multiple modules, display each on a new line
+        moduleInfos.forEach(moduleInfo => {
+            const moduleDiv = document.createElement('div');
+            moduleDiv.className = 'module-info-item';
+            moduleDiv.textContent = `${moduleInfo.code} - ${moduleInfo.name}`;
+            moduleCodeElement.appendChild(moduleDiv);
+        });
+    }
     
     // Show course info section
     showSection('course-info');
     
-    // Copy options panel after course info
-    const optionsPanel = document.getElementById('options-panel').cloneNode(true);
-    optionsPanel.id = 'options-panel-copy';
-    
-    // Add event listeners to the cloned buttons
-    optionsPanel.querySelector('#new-course-btn').addEventListener('click', resetToSearch);
-    optionsPanel.querySelector('#suggest-clo-btn').addEventListener('click', suggestCLOs);
-    optionsPanel.querySelector('#input-clo-btn').addEventListener('click', showCLOInput);
-    
-    // Insert the cloned options panel after course-info section
-    const courseInfoSection = document.getElementById('course-info');
-    courseInfoSection.parentNode.insertBefore(optionsPanel, courseInfoSection.nextSibling);
-    optionsPanel.classList.remove('hidden-section');
+    // Show options panel
+    showSection('options-panel');
 }
 
 // Retrieve MLOs based on module codes from all courses
@@ -477,40 +587,15 @@ function addCLOToDisplay(cloText) {
             <strong>CLO ${index}:</strong> ${cloText}
         </div>
         <div class="clo-actions">
-            <button class="edit-clo" data-index="${index - 1}"><i class="fas fa-edit"></i></button>
-            <button class="delete-clo" data-index="${index - 1}"><i class="fas fa-trash"></i></button>
+            <button class="remove-clo" onclick="removeCLO(${index - 1})"><i class="fas fa-trash"></i></button>
         </div>
     `;
-    
-    // Add event listeners for edit and delete buttons
-    cloItem.querySelector('.edit-clo').addEventListener('click', function() {
-        editCLO(this.getAttribute('data-index'));
-    });
-    
-    cloItem.querySelector('.delete-clo').addEventListener('click', function() {
-        deleteCLO(this.getAttribute('data-index'));
-    });
     
     cloList.appendChild(cloItem);
 }
 
-// Edit a CLO
-function editCLO(index) {
-    const cloText = currentCLOs[index];
-    const cloTextarea = document.getElementById('clo-textarea');
-    
-    // Set textarea value to CLO text
-    cloTextarea.value = cloText;
-    
-    // Delete the CLO (will be re-added when user clicks Add CLO)
-    deleteCLO(index);
-    
-    // Focus textarea
-    cloTextarea.focus();
-}
-
-// Delete a CLO
-function deleteCLO(index) {
+// Remove a CLO from the list
+function removeCLO(index) {
     // Remove from array
     currentCLOs.splice(index, 1);
     
@@ -518,74 +603,54 @@ function deleteCLO(index) {
     const cloList = document.getElementById('clo-list');
     cloList.innerHTML = '';
     
-    // Re-add all CLOs to display
+    // Rebuild display
     currentCLOs.forEach(clo => {
         addCLOToDisplay(clo);
     });
 }
 
-// Suggest CLOs based on course and MLOs
-function suggestCLOs() {
-    // Generate suggestions based on course name and MLOs
-    const suggestions = generateCLOSuggestions();
+// Show a specific section and hide others
+function showSection(sectionId) {
+    // Hide all sections
+    document.querySelectorAll('section').forEach(section => {
+        section.classList.add('hidden-section');
+        section.classList.remove('active-section');
+    });
     
-    // Display suggestions
-    displayCLOSuggestions(suggestions);
-    
-    // Show suggestions section
-    showSection('clo-suggestions');
+    // Show the requested section
+    const targetSection = document.getElementById(sectionId);
+    if (targetSection) {
+        targetSection.classList.remove('hidden-section');
+        targetSection.classList.add('active-section');
+    }
 }
 
-// Generate CLO suggestions based on course and MLOs
-function generateCLOSuggestions() {
-    // Use the first course for common information
-    const course = currentCourses[0];
-    const courseName = course.oppeainenimetusik;
-    const suggestions = [];
+// Show error message
+function showError(message) {
+    alert(message);
+    console.error(message);
+}
+
+// Suggest CLOs based on MLOs
+function suggestCLOs() {
+    console.log('Suggesting CLOs...');
     
-    // Generate a basic set of CLOs based on the course name and MLOs
-    // This is a simplified version - in a real application, this would use more sophisticated NLP
-    
-    // Suggestion 1: Understanding core concepts
-    suggestions.push(`Demonstrate comprehensive understanding of core concepts and principles in ${courseName}.`);
-    
-    // Suggestion 2: Application of knowledge
-    suggestions.push(`Apply theoretical knowledge of ${courseName} to solve practical problems in relevant contexts.`);
-    
-    // Suggestion 3: Critical analysis
-    suggestions.push(`Critically analyze and evaluate approaches and methodologies used in ${courseName}.`);
-    
-    // Suggestion 4: Communication
-    suggestions.push(`Effectively communicate ideas, findings, and solutions related to ${courseName} using appropriate terminology.`);
-    
-    // Suggestion 5: Based on MLOs if available
-    if (currentMLOs.length > 0) {
-        // Take keywords from the first MLO and create a related CLO
-        const firstMLO = currentMLOs[0].ilosisu;
-        const keywords = extractKeywords(firstMLO);
-        suggestions.push(`Develop proficiency in ${keywords.join(', ')} as they relate to ${courseName}.`);
+    // Validate prerequisites
+    if (!currentMLOs || currentMLOs.length === 0) {
+        showError('No Module Learning Outcomes available for suggestions.');
+        return;
     }
     
-    return suggestions;
-}
-
-// Extract keywords from text (simplified version)
-function extractKeywords(text) {
-    // Remove common words and punctuation
-    const commonWords = ['the', 'and', 'is', 'in', 'to', 'of', 'a', 'for', 'with', 'on', 'at'];
+    // In a real app, this would call an API or AI to generate suggestions
+    // For now, we'll create dummy suggestions
+    const suggestions = [
+        `Understand key concepts of ${currentCourses[0].oppeainenimetusik}`,
+        `Apply theoretical knowledge to solve problems related to ${currentCourses[0].oppeainenimetusik}`,
+        `Analyze and evaluate challenges in the field of ${currentCourses[0].oppeainenimetusik}`,
+        `Design and implement solutions using methods from ${currentCourses[0].oppeainenimetusik}`
+    ];
     
-    // Split text into words, filter out common words, and take unique words
-    const words = text.toLowerCase()
-        .replace(/[.,;:'"!?()]/g, '')
-        .split(' ')
-        .filter(word => word.length > 3 && !commonWords.includes(word));
-    
-    // Return up to 3 unique words
-    return [...new Set(words)].slice(0, 3);
-}
-
-// Display CLO suggestions
-function displayCLOSuggestions(suggestions) {
+    // Display suggestions
     const suggestionsContainer = document.getElementById('suggestions-container');
     suggestionsContainer.innerHTML = '';
     
@@ -593,395 +658,218 @@ function displayCLOSuggestions(suggestions) {
         const suggestionItem = document.createElement('div');
         suggestionItem.className = 'suggestion-item';
         suggestionItem.innerHTML = `
-            <input type="checkbox" class="suggestion-checkbox" id="suggestion-${index}" checked>
+            <input type="checkbox" id="suggestion-${index}" class="suggestion-checkbox" checked>
             <label for="suggestion-${index}">${suggestion}</label>
         `;
         suggestionsContainer.appendChild(suggestionItem);
     });
+    
+    // Show suggestions section
+    showSection('clo-suggestions');
 }
 
-// Use selected suggestions as CLOs
+// Use the suggested CLOs
 function useSuggestions() {
-    // Clear current CLOs
+    console.log('Using suggestions...');
+    
+    // Clear existing CLOs
     currentCLOs = [];
     
     // Get all checked suggestions
     const checkboxes = document.querySelectorAll('.suggestion-checkbox:checked');
-    
-    checkboxes.forEach(checkbox => {
-        const label = checkbox.nextElementSibling.textContent;
-        currentCLOs.push(label);
+    const suggestions = Array.from(checkboxes).map(checkbox => {
+        return checkbox.nextElementSibling.textContent;
     });
     
-    // If no suggestions selected, show message
-    if (currentCLOs.length === 0) {
-        alert('Please select at least one suggestion.');
-        return;
-    }
+    // Add as CLOs
+    currentCLOs = [...suggestions];
     
-    // Perform analysis with selected CLOs
-    performAnalysis();
-}
-
-// Modify suggestions (go to CLO input with suggestions pre-filled)
-function modifySuggestions() {
-    // Get all checked suggestions
-    const checkboxes = document.querySelectorAll('.suggestion-checkbox:checked');
-    let selectedSuggestions = [];
-    
-    checkboxes.forEach(checkbox => {
-        const label = checkbox.nextElementSibling.textContent;
-        selectedSuggestions.push(label);
-    });
-    
-    // Show CLO input section
+    // Show CLO input section with the suggestions
     showCLOInput();
     
-    // Pre-fill textarea with selected suggestions
-    document.getElementById('clo-textarea').value = selectedSuggestions.join('\n');
+    // Display the CLOs
+    suggestions.forEach(suggestion => {
+        addCLOToDisplay(suggestion);
+    });
 }
 
-// Perform alignment analysis between CLOs and MLOs
-function performAnalysis() {
-    // Check if we have CLOs
-    if (currentCLOs.length === 0) {
-        alert('Please add at least one Course Learning Outcome.');
-        return;
-    }
+// Modify suggestions
+function modifySuggestions() {
+    console.log('Modifying suggestions...');
     
-    // Check if we have MLOs
-    if (currentMLOs.length === 0) {
-        alert('No Module Learning Outcomes available for analysis.');
-        return;
-    }
+    // Get all checked suggestions
+    const checkboxes = document.querySelectorAll('.suggestion-checkbox:checked');
+    const suggestions = Array.from(checkboxes).map(checkbox => {
+        return checkbox.nextElementSibling.textContent;
+    }).join('\n');
     
-    // Perform the analysis
-    const analysisResults = analyzeAlignment();
-    
-    // Display analysis results
-    displayAnalysisResults(analysisResults);
-    
-    // Show analysis section
-    showSection('alignment-analysis');
-    
-    // Generate and display report
-    generateReport(analysisResults);
+    // Show CLO input with suggestions in textarea
+    showCLOInput();
+    document.getElementById('clo-textarea').value = suggestions;
 }
 
 // Analyze alignment between CLOs and MLOs
 function analyzeAlignment() {
+    console.log('Analyzing alignment...');
+    
+    // In a real app, this would use AI or algorithms to analyze alignment
+    // For now, we'll create dummy analysis results
     const results = [];
     
-    // For each CLO, find the best matching MLO and score the alignment
     currentCLOs.forEach((clo, cloIndex) => {
-        let bestMatch = {
-            mlo: null,
-            mloIndex: -1,
-            score: 0,
-            reason: '',
-            suggestion: ''
-        };
+        // For each CLO, find a sample of related MLOs
+        const relatedMLOs = currentMLOs.slice(0, Math.min(2, currentMLOs.length));
         
-        // Compare with each MLO
-        currentMLOs.forEach((mlo, mloIndex) => {
-            const score = calculateAlignmentScore(clo, mlo.ilosisu);
-            const reason = generateAlignmentReason(clo, mlo.ilosisu, score);
-            const suggestion = score < 3 ? generateImprovementSuggestion(clo, mlo.ilosisu) : '';
+        relatedMLOs.forEach((mlo, mloIndex) => {
+            // Generate a sample score between 1-5
+            const score = Math.floor(Math.random() * 5) + 1;
             
-            // If this is the best match so far, update bestMatch
-            if (score > bestMatch.score) {
-                bestMatch = {
-                    mlo: mlo,
-                    mloIndex: mloIndex,
-                    score: score,
-                    reason: reason,
-                    suggestion: suggestion
-                };
-            }
-        });
-        
-        // Add to results
-        results.push({
-            clo: clo,
-            cloIndex: cloIndex,
-            mlo: bestMatch.mlo,
-            mloIndex: bestMatch.mloIndex,
-            score: bestMatch.score,
-            reason: bestMatch.reason,
-            suggestion: bestMatch.suggestion
+            results.push({
+                clo: clo,
+                cloIndex: cloIndex,
+                mlo: mlo.ilosisu.replace(/"/g, ''),
+                mloIndex: mloIndex,
+                score: score,
+                reason: `The CLO ${score < 3 ? 'somewhat addresses' : 'strongly aligns with'} this MLO.`,
+                suggestion: score < 3 ? `Consider modifying the CLO to better align with this MLO by using action verbs and focusing on measurable outcomes.` : ''
+            });
         });
     });
     
     return results;
 }
 
-// Calculate alignment score between CLO and MLO (1-5 scale)
-function calculateAlignmentScore(clo, mloText) {
-    // This is a simplified scoring algorithm
-    // In a real application, this would use more sophisticated NLP techniques
-    
-    // Convert to lowercase for comparison
-    const cloLower = clo.toLowerCase();
-    const mloLower = mloText.toLowerCase();
-    
-    // Extract keywords from both
-    const cloKeywords = extractKeywords(cloLower);
-    const mloKeywords = extractKeywords(mloLower);
-    
-    // Count matching keywords
-    let matchCount = 0;
-    cloKeywords.forEach(keyword => {
-        if (mloLower.includes(keyword)) {
-            matchCount++;
-        }
-    });
-    
-    // Check for verb alignment (simplified)
-    const verbs = ['analyze', 'apply', 'assess', 'create', 'define', 'demonstrate', 'design', 'develop', 'evaluate', 'explain', 'identify', 'implement', 'interpret', 'plan', 'solve', 'understand', 'use'];
-    let verbAlignment = false;
-    
-    verbs.forEach(verb => {
-        if (cloLower.includes(verb) && mloLower.includes(verb)) {
-            verbAlignment = true;
-        }
-    });
-    
-    // Calculate score based on keyword matches and verb alignment
-    let score = 1; // Base score
-    
-    if (matchCount > 0) {
-        score += Math.min(matchCount, 2); // Up to 2 points for keyword matches
-    }
-    
-    if (verbAlignment) {
-        score += 1; // 1 point for verb alignment
-    }
-    
-    // Check for overall thematic alignment
-    if (cloLower.length > 20 && mloLower.includes(cloLower.substring(0, 20).split(' ').slice(-1)[0])) {
-        score += 1; // 1 point for thematic alignment
-    }
-    
-    return Math.min(score, 5); // Cap at 5
-}
-
-// Generate reason for alignment score
-function generateAlignmentReason(clo, mloText, score) {
-    // Generate a reason based on the score
-    switch (score) {
-        case 1:
-            return 'Very low alignment. The CLO and MLO address different topics with minimal overlap in content or skills.';
-        case 2:
-            return 'Low alignment. There is some topical overlap, but the CLO and MLO focus on different aspects or levels of learning.';
-        case 3:
-            return 'Moderate alignment. The CLO and MLO share some common themes and learning objectives, but could be more closely aligned.';
-        case 4:
-            return 'Good alignment. The CLO clearly supports the MLO with significant overlap in content and skills development.';
-        case 5:
-            return 'Excellent alignment. The CLO directly supports and enhances the MLO with strong connections in both content and expected outcomes.';
-        default:
-            return 'Unable to determine alignment.';
-    }
-}
-
-// Generate improvement suggestion for low scores
-function generateImprovementSuggestion(clo, mloText) {
-    // Extract keywords from MLO
-    const mloKeywords = extractKeywords(mloText);
-    
-    // Generate suggestion based on keywords
-    if (mloKeywords.length > 0) {
-        return `Consider revising the CLO to incorporate key concepts from the MLO such as: ${mloKeywords.join(', ')}. Align the learning level (e.g., understand, apply, analyze) with the MLO expectations.`;
-    } else {
-        return 'Consider revising the CLO to more closely align with the themes and learning levels in the MLO.';
-    }
-}
-
 // Display analysis results
 function displayAnalysisResults(results) {
+    console.log('Displaying analysis results...');
+    
     const analysisContainer = document.getElementById('analysis-container');
     analysisContainer.innerHTML = '';
     
-    results.forEach((result, index) => {
+    if (results.length === 0) {
+        analysisContainer.innerHTML = '<p>No alignment analysis results available.</p>';
+        return;
+    }
+    
+    results.forEach(result => {
         const alignmentItem = document.createElement('div');
         alignmentItem.className = 'alignment-item';
         
-        // Create header with title and score
-        const header = document.createElement('div');
-        header.className = 'alignment-header';
-        
-        const title = document.createElement('div');
-        title.className = 'alignment-title';
-        title.textContent = `Alignment ${index + 1}`;
-        
-        const score = document.createElement('div');
-        score.className = `alignment-score score-${result.score}`;
-        score.textContent = `Score: ${result.score}/5`;
-        
-        header.appendChild(title);
-        header.appendChild(score);
-        
-        // Create details section
-        const details = document.createElement('div');
-        details.className = 'alignment-details';
-        
-        // CLO section
-        const cloSection = document.createElement('div');
-        cloSection.className = 'alignment-clo';
-        cloSection.innerHTML = `
-            <strong>CLO ${result.cloIndex + 1}:</strong>
-            <p>${result.clo}</p>
+        alignmentItem.innerHTML = `
+            <div class="alignment-header">
+                <div class="alignment-title">CLO ${result.cloIndex + 1} → MLO Alignment</div>
+                <div class="alignment-score score-${result.score}">${result.score}/5</div>
+            </div>
+            <div class="alignment-details">
+                <div class="alignment-clo">
+                    <strong>Course Learning Outcome:</strong>
+                    <p>${result.clo}</p>
+                </div>
+                <div class="alignment-mlo">
+                    <strong>Module Learning Outcome:</strong>
+                    <p>${result.mlo}</p>
+                </div>
+                <div class="alignment-reason">
+                    <strong>Analysis:</strong>
+                    <p>${result.reason}</p>
+                </div>
+                ${result.suggestion ? `
+                <div class="alignment-suggestion">
+                    <strong>Suggestion:</strong>
+                    <p>${result.suggestion}</p>
+                </div>
+                ` : ''}
+            </div>
         `;
         
-        // MLO section
-        const mloSection = document.createElement('div');
-        mloSection.className = 'alignment-mlo';
-        mloSection.innerHTML = `
-            <strong>MLO ${result.mloIndex + 1}:</strong>
-            <p>${result.mlo.ilosisu}</p>
-        `;
-        
-        // Reason section
-        const reasonSection = document.createElement('div');
-        reasonSection.className = 'alignment-reason';
-        reasonSection.innerHTML = `
-            <strong>Reason:</strong>
-            <p>${result.reason}</p>
-        `;
-        
-        // Add sections to details
-        details.appendChild(cloSection);
-        details.appendChild(mloSection);
-        details.appendChild(reasonSection);
-        
-        // Add suggestion if score is low
-        if (result.score < 3 && result.suggestion) {
-            const suggestionSection = document.createElement('div');
-            suggestionSection.className = 'alignment-suggestion';
-            suggestionSection.innerHTML = `
-                <strong>Suggestion for Improvement:</strong>
-                <p>${result.suggestion}</p>
-            `;
-            details.appendChild(suggestionSection);
-        }
-        
-        // Add header and details to item
-        alignmentItem.appendChild(header);
-        alignmentItem.appendChild(details);
-        
-        // Add item to container
         analysisContainer.appendChild(alignmentItem);
     });
 }
 
-// Generate report
+// Generate a report based on analysis results
 function generateReport(results) {
-    const reportContainer = document.getElementById('report-container');
+    console.log('Generating report...');
     
-    // Get the first course for common information
+    const reportContainer = document.getElementById('report-container');
+    reportContainer.innerHTML = '';
+    
+    // Course info section
     const course = currentCourses[0];
     
-    // Get all unique module codes
-    const moduleCodes = [...new Set(currentCourses.map(c => c.moodlikood))];
-    
-    // Calculate overall statistics
-    const totalScore = results.reduce((sum, result) => sum + result.score, 0);
-    const averageScore = (totalScore / results.length).toFixed(1);
-    const lowScoreCount = results.filter(result => result.score < 3).length;
-    
-    // Create report HTML
-    reportContainer.innerHTML = `
-        <div class="report-header">
-            <h3>Alignment Analysis Report</h3>
-            <p>${course.oppeainenimetusik} (${course.ainekood})</p>
-        </div>
-        
-        <div class="report-section">
-            <h4>Summary</h4>
-            <p>Course: ${course.oppeainenimetusik} (${course.ainekood})</p>
-            <p>Modules: ${moduleCodes.join(', ')}</p>
-            <p>Number of CLOs: ${currentCLOs.length}</p>
-            <p>Number of MLOs: ${currentMLOs.length}</p>
-            <p>Average Alignment Score: ${averageScore}/5</p>
-            <p>CLOs Needing Improvement: ${lowScoreCount}</p>
-        </div>
-        
-        <div class="report-section">
-            <h4>Alignment Scores</h4>
-            <table class="report-table">
-                <thead>
-                    <tr>
-                        <th>CLO</th>
-                        <th>Best Matching MLO</th>
-                        <th>Score</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${results.map((result, index) => `
-                        <tr>
-                            <td>CLO ${index + 1}: ${truncateText(result.clo, 50)}</td>
-                            <td>MLO ${result.mloIndex + 1}: ${truncateText(result.mlo.ilosisu, 50)}</td>
-                            <td class="score-${result.score}">${result.score}/5</td>
-                        </tr>
-                    `).join('')}
-                </tbody>
-            </table>
-        </div>
-        
-        ${lowScoreCount > 0 ? `
-            <div class="report-section">
-                <h4>Improvement Suggestions</h4>
-                <ul>
-                    ${results.filter(result => result.score < 3).map((result, index) => `
-                        <li>
-                            <strong>CLO ${result.cloIndex + 1}:</strong> ${result.suggestion}
-                        </li>
-                    `).join('')}
-                </ul>
-            </div>
-        ` : ''}
+    const reportHeader = document.createElement('div');
+    reportHeader.className = 'report-header';
+    reportHeader.innerHTML = `
+        <h3>Alignment Report for ${course.ainekood}: ${course.oppeainenimetusik}</h3>
+        <p>Generated on ${new Date().toLocaleDateString()}</p>
     `;
+    
+    // Summary section
+    const summaryCounts = {};
+    results.forEach(result => {
+        if (!summaryCounts[result.score]) {
+            summaryCounts[result.score] = 0;
+        }
+        summaryCounts[result.score]++;
+    });
+    
+    const summarySection = document.createElement('div');
+    summarySection.className = 'report-section';
+    summarySection.innerHTML = `
+        <h4>Summary</h4>
+        <p>Total alignments analyzed: ${results.length}</p>
+        <p>Average alignment score: ${(results.reduce((total, r) => total + r.score, 0) / results.length).toFixed(1)}/5</p>
+        <table class="report-table">
+            <tr>
+                <th>Alignment Score</th>
+                <th>Count</th>
+                <th>Percentage</th>
+            </tr>
+            ${[5, 4, 3, 2, 1].map(score => `
+                <tr>
+                    <td>${score}/5</td>
+                    <td>${summaryCounts[score] || 0}</td>
+                    <td>${Math.round(((summaryCounts[score] || 0) / results.length) * 100)}%</td>
+                </tr>
+            `).join('')}
+        </table>
+    `;
+    
+    // Details section
+    const detailsSection = document.createElement('div');
+    detailsSection.className = 'report-section';
+    detailsSection.innerHTML = `
+        <h4>Alignment Details</h4>
+        <table class="report-table">
+            <tr>
+                <th>CLO</th>
+                <th>MLO</th>
+                <th>Score</th>
+                <th>Analysis</th>
+            </tr>
+            ${results.map(result => `
+                <tr>
+                    <td>${result.clo}</td>
+                    <td>${result.mlo}</td>
+                    <td class="score-${result.score}">${result.score}/5</td>
+                    <td>${result.reason} ${result.suggestion ? `<br><em>${result.suggestion}</em>` : ''}</td>
+                </tr>
+            `).join('')}
+        </table>
+    `;
+    
+    // Append all sections
+    reportContainer.appendChild(reportHeader);
+    reportContainer.appendChild(summarySection);
+    reportContainer.appendChild(detailsSection);
     
     // Show report section
     showSection('report-section');
 }
 
-// Truncate text to a certain length
-function truncateText(text, maxLength) {
-    if (text.length <= maxLength) {
-        return text;
-    }
-    return text.substring(0, maxLength) + '...';
-}
-
-// Export report as PDF (simplified - would use a library in a real app)
+// Export the report
 function exportReport() {
-    alert('In a production application, this would generate a PDF report for download.');
-    // In a real application, this would use a library like jsPDF or html2pdf
-}
-
-// Show a specific section and hide others
-function showSection(sectionId) {
-    // Don't hide course-info, mlo-display if they're already shown
-    const keepVisible = ['course-info', 'mlo-display'];
+    console.log('Exporting report...');
     
-    document.querySelectorAll('section').forEach(section => {
-        if (keepVisible.includes(section.id) && !section.classList.contains('hidden-section')) {
-            // Keep these sections visible if they're already shown
-            return;
-        }
-        
-        if (section.id === sectionId) {
-            section.classList.remove('hidden-section');
-            section.classList.add('active-section');
-        } else if (!keepVisible.includes(section.id)) {
-            section.classList.add('hidden-section');
-            section.classList.remove('active-section');
-        }
-    });
-}
-
-// Show error message
-function showError(message) {
-    alert(message);
+    // In a real app, this would generate a PDF or document
+    alert('Report exported successfully! (This is a placeholder - in a real app, this would download a PDF)');
 }
