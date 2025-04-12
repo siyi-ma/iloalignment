@@ -65,7 +65,7 @@ Simply open the `index.html` file in a web browser. All data is embedded in the 
 1. Create a GitHub repository
 2. Upload the project files
 3. Enable GitHub Pages in the repository settings
-4. Your application will be available at `https://[username].github.io/[repository-name]`
+4. Your application will be available at `(https://eestiexile.github.io/iloalignment/)`
 
 ### Option 4: Netlify/Vercel Deployment
 1. Create an account on Netlify or Vercel
