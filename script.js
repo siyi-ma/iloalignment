@@ -191,10 +191,10 @@ function setupEventListeners() {
     });
     
     // Home button
-    document.getElementById('home-btn').addEventListener('click', resetToSearch);
+    document.getElementById('home-btn').addEventListener('click', resetApp);
     
     // New course button
-    document.getElementById('new-course-btn').addEventListener('click', resetToSearch);
+    document.getElementById('new-course-btn').addEventListener('click', resetApp);
     
     // Suggest CLOs button (commented out)
     // document.getElementById('suggest-clo-btn').addEventListener('click', suggestCLOs);
@@ -216,6 +216,40 @@ function setupEventListeners() {
     
     // Export report button
     document.getElementById('export-report-btn').addEventListener('click', exportReport);
+}
+
+// Function to reset the app
+function resetApp() {
+    // Clear input fields
+    document.getElementById('course-code').value = '';
+
+    // Clear displayed data
+    document.getElementById('display-course-code').textContent = '';
+    document.getElementById('course-name-en').textContent = '';
+    document.getElementById('course-name-et').textContent = '';
+    document.getElementById('course-credits').textContent = '';
+    document.getElementById('module-code').textContent = '';
+    document.getElementById('mlo-container').innerHTML = '';
+    document.getElementById('clo-list').innerHTML = '';
+    document.getElementById('analysis-container').innerHTML = '';
+    document.getElementById('report-container').innerHTML = '';
+    document.getElementById('suggestions-container').innerHTML = '';
+
+    // Reset global variables
+    currentCourses = [];
+    currentMLOs = [];
+    currentCLOs = [];
+
+    // Hide all sections except the course input section
+    document.querySelectorAll('section').forEach(section => {
+        if (section.id === 'course-input') {
+            section.classList.remove('hidden-section');
+            section.classList.add('active-section');
+        } else {
+            section.classList.add('hidden-section');
+            section.classList.remove('active-section');
+        }
+    });
 }
 
 // Search for a course by code
