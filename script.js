@@ -198,6 +198,9 @@ function setupEventListeners() {
     
     // Export report button
     document.getElementById('export-report-btn').addEventListener('click', exportReport);
+
+    // Perform analysis on page load
+    searchCourse();
 }
 
 // Search for a course by code
@@ -248,6 +251,9 @@ function searchCourse() {
     
     // Show options panel
     showSection('options-panel');
+
+    // Perform analysis
+    performAnalysis();
 }
 
 // Validate course code format (3 letters followed by 4 digits)
@@ -460,8 +466,16 @@ function resetToSearch() {
 
 // Show CLO input section
 function showCLOInput() {
-    // Clear existing CLOs
-    currentCLOs = [];
+// Clear existing CLOs
+    currentCLOs = [
+        "describes basic terms, principles and legislation of circular economy",
+        "describes differences and impacts of circular and linear business models",
+        "describes material flows (from mining, processing, manufacturing to reusing and recycling)",
+        "analyses manufacturing processing accordingly to the principles of circular economy and sustainability",
+        "makes suggestions for applying more sustainable business models",
+        "describes different types of raw materials and their demand in different industries",
+        "values different materials used in the industry and everyday life and knows the importance of reusing and recycling in the context of sustainable economic development"
+    ];
     document.getElementById('clo-list').innerHTML = '';
     document.getElementById('clo-textarea').value = '';
     
@@ -798,15 +812,15 @@ function generateAlignmentReason(clo, mloText, score) {
     // Generate a reason based on the score
     switch (score) {
         case 1:
-            return 'Very low alignment. The CLO and MLO address different topics with minimal overlap in content or skills.';
+            return `Very low alignment. The CLO and MLO address different topics with minimal overlap in content or skills. The CLO focuses on ${truncateText(clo, 30)}, while the MLO focuses on ${truncateText(mloText, 30)}.`;
         case 2:
-            return 'Low alignment. There is some topical overlap, but the CLO and MLO focus on different aspects or levels of learning.';
+            return `Low alignment. There is some topical overlap, but the CLO and MLO focus on different aspects or levels of learning. The CLO mentions ${truncateText(clo, 20)}, while the MLO mentions ${truncateText(mloText, 20)}.`;
         case 3:
-            return 'Moderate alignment. The CLO and MLO share some common themes and learning objectives, but could be more closely aligned.';
+            return `Moderate alignment. The CLO and MLO share some common themes and learning objectives, but could be more closely aligned. Both the CLO and MLO discuss aspects related to ${extractKeywords([clo, mloText].join(' '))[0]}.`;
         case 4:
-            return 'Good alignment. The CLO clearly supports the MLO with significant overlap in content and skills development.';
+            return `Good alignment. The CLO clearly supports the MLO with significant overlap in content and skills development. The CLO and MLO both emphasize ${extractKeywords([clo, mloText].join(' '))[0]} and ${extractKeywords([clo, mloText].join(' '))[1]}.`;
         case 5:
-            return 'Excellent alignment. The CLO directly supports and enhances the MLO with strong connections in both content and expected outcomes.';
+            return `Excellent alignment. The CLO directly supports and enhances the MLO with strong connections in both content and expected outcomes. The CLO and MLO are strongly aligned in their focus on ${extractKeywords([clo, mloText].join(' '))[0]}, ${extractKeywords([clo, mloText].join(' '))[1]}, and ${extractKeywords([clo, mloText].join(' '))[2]}.`;
         default:
             return 'Unable to determine alignment.';
     }
@@ -935,13 +949,14 @@ function generateReport(results) {
         </div>
         
         <div class="report-section">
-            <h4>Alignment Scores</h4>
+<h4>Alignment Scores</h4>
             <table class="report-table">
                 <thead>
                     <tr>
                         <th>CLO</th>
                         <th>Best Matching MLO</th>
                         <th>Score</th>
+                        <th>Justification</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -950,6 +965,7 @@ function generateReport(results) {
                             <td>CLO ${index + 1}: ${truncateText(result.clo, 50)}</td>
                             <td>MLO ${result.mloIndex + 1}: ${truncateText(result.mlo.ilosisu, 50)}</td>
                             <td class="score-${result.score}">${result.score}/5</td>
+                            <td>${result.reason}</td>
                         </tr>
                     `).join('')}
                 </tbody>
