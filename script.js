@@ -31,41 +31,41 @@ function populateCourseCodeAutocomplete() {
 // Load CSV data directly from embedded strings
 async function loadCSVData() {
     try {
-        // Embedded course data (ainemoodle.csv content)
+        // Embedded course data with corrected special characters
         const courseText = `ainekood;oppeainenimetusek;oppeainenimetusik;eap;moodlikood
 EKX0040;Sissejuhatus ringmajandusse;Introduction to Circular Economy;3;e1mlo
 EKX0040;Sissejuhatus ringmajandusse;Introduction to Circular Economy;3;e2mlo
 HHF3081;Filosoofia;Philosophy;3;ylmlo
-HOL6010;Euroopa Liidu igus;European Union Law;6;e1mlo
-HOL6010;Euroopa Liidu igus;European Union Law;6;e2mlo
+HOL6010;Euroopa Liidu õigus;European Union Law;6;e1mlo
+HOL6010;Euroopa Liidu õigus;European Union Law;6;e2mlo
 IDK0043;IT alused I;IT Foundations I;3;ylmlo
 IDK0044;IT alused II;IT Foundations II;3;ylmlo
 MEF3010;Finantsmodelleerimine;Financial Modelling;6;e1mlo
 MEF3010;Finantsmodelleerimine;Financial Modelling;6;e2mlo
 MEF3020;Eraisiku rahandus;Personal Finance;3;ylmlo
-MEF3030;Bakalaureuseseminar;Bachelor Seminar;3;e2mlo
-MEM3010;Matemaatika tienduspe rikorralduse lipilastele;Refresher Course in Mathematics for Business Students;3;ylmlo
+MEF3030;Bakalaureusetöö seminar;Bachelor Seminar;3;e2mlo
+MEM3010;Matemaatika täiendusõpe ärikorralduse üliõpilastele;Refresher Course in Mathematics for Business Students;3;ylmlo
 MEM3020;Majandusmatemaatika alused;Fundamentals of Business Mathematics;6;p1mlo
-MMA3090;ritarkvara ja arvestuse infossteemid;Business Software Solutions;6;e1mlo
-MMA3090;ritarkvara ja arvestuse infossteemid;Business Software Solutions;6;e2mlo
-MMA3100;rianaltika alused;Business Analytics;6;e1mlo
-MMA3100;rianaltika alused;Business Analytics;6;e2mlo
+MMA3090;Äritarkvara ja arvestuse infosüsteemid;Business Software Solutions;6;e1mlo
+MMA3090;Äritarkvara ja arvestuse infosüsteemid;Business Software Solutions;6;e2mlo
+MMA3100;Ärianalüütika alused;Business Analytics;6;e1mlo
+MMA3100;Ärianalüütika alused;Business Analytics;6;e2mlo
 MMA3110;Finantsarvestuse keskkursus;Intermediate Financial Accounting;6;e1mlo
 MMA3110;Finantsarvestuse keskkursus;Intermediate Financial Accounting;6;e2mlo
 MMA3160;Juhtimis- ja kuluarvestus;Management and Cost Accounting;6;e1mlo
 MMA3160;Juhtimis- ja kuluarvestus;Management and Cost Accounting;6;e2mlo
-MME3010;Keskkonna ja sstva arengu konoomika;Environmental and Sustainable Development Economics;6;p1mlo
-MMJ3040;Rahvusvaheline ri ja eetika;International Business and Ethics;6;p2mlo
+MME3010;Keskkonna ja säästva arengu ökonoomika;Environmental and Sustainable Development Economics;6;p1mlo
+MMJ3040;Rahvusvaheline äri ja eetika;International Business and Ethics;6;p2mlo
 MMJ3050;Loovus ja innovatsioon;Creativity and innovation;6;e1mlo
 MMJ3050;Loovus ja innovatsioon;Creativity and innovation;6;e2mlo
-MMJ3070;Tpraktika;Internship;6;e1mlo
-MMJ3070;Tpraktika;Internship;6;e2mlo
+MMJ3070;Tööpraktika;Internship;6;e1mlo
+MMJ3070;Tööpraktika;Internship;6;e2mlo
 MMK3100;Tootmise juhtimine ja arengutrendid;Operations Management and Development Trends;6;e1mlo
 MMK3100;Tootmise juhtimine ja arengutrendid;Operations Management and Development Trends;6;e2mlo
-MMM3020;Bakalaureuseseminar;Bachelor Seminar;3;e1mlo
+MMM3020;Bakalaureusetöö seminar;Bachelor Seminar;3;e1mlo
 MMM3040;Turundusuuring;Marketing Research;6;e1mlo
 MMM3040;Turundusuuring;Marketing Research;6;e2mlo
-MMM3070;Turunduskommunikatsioon ja tarbijakitumine;Marketing Communication and Consumer Behaviour;6;e1mlo
+MMM3070;Turunduskommunikatsioon ja tarbijäkäitumine;Marketing Communication and Consumer Behaviour;6;e1mlo
 MMO3030;Juhtimine ja eestvedamine;Management and Leadership;6;p2mlo
 MMO3050;Rahvusvaheline inimeste juhtimine;International People Management;6;e1mlo
 MMO3050;Rahvusvaheline inimeste juhtimine;International People Management;6;e2mlo
@@ -73,8 +73,8 @@ MMO3070;Teadmusjuhtimine;Knowledge Management;6;e1mlo
 MMO3070;Teadmusjuhtimine;Knowledge Management;6;e2mlo
 MMS3030;Majandussotsioloogia;Economic sociology;6;e1mlo
 MMS3030;Majandussotsioloogia;Economic sociology;6;e2mlo
-MMS3050;riuuringute alused;Research Methods in Business Studies;6;p2mlo
-MOE5071;riiguse alused;Business Law;6;p2mlo
+MMS3050;Äriuuringute alused;Research Methods in Business Studies;6;p2mlo
+MOE5071;Äriõiguse alused;Business Law;6;p2mlo
 TAF2810;Finantsarvestuse alused;Principles of Financial Accounting;6;p2mlo
 TER2550;Rahanduse alused;Basic Finance;6;p2mlo
 TER2560;Raha, finantsinstitutsioonid ja turud;Money;6;e1mlo
@@ -82,25 +82,25 @@ TER2560;Raha, finantsinstitutsioonid ja turud;Money;6;e2mlo
 TER2620;Finantsjuhtimine;Financial Management;6;e1mlo
 TER2620;Finantsjuhtimine;Financial Management;6;e2mlo
 TES0020;Statistika;Statistics;6;p1mlo
-TES1140;konomeetria;Econometrics;6;e1mlo
-TES1140;konomeetria;Econometrics;6;e2mlo
-TET0010;Mikrokonoomika I;Microeconomics I;6;p1mlo
-TET2550;Makrokonoomika I;Macroeconomics I;6;p1mlo
-TMJ0140;Ettevtluse alused;Introduction to Entrepreneurship;6;p2mlo
-TMJ0190;Start-up ettevtlus;Start-up Entrepreneurship;6;e1mlo
-TMJ0190;Start-up ettevtlus;Start-up Entrepreneurship;6;e2mlo
-TMJ0230;rilogistika ja varude juhtimine;Logistics and Inventory Management;6;p2mlo
+TES1140;Ökonometria;Econometrics;6;e1mlo
+TES1140;Ökonometria;Econometrics;6;e2mlo
+TET0010;Mikroökonoomika I;Microeconomics I;6;p1mlo
+TET2550;Makroökonoomika I;Macroeconomics I;6;p1mlo
+TMJ0140;Ettevõtluse alused;Introduction to Entrepreneurship;6;p2mlo
+TMJ0190;Start-up ettevõtlus;Start-up Entrepreneurship;6;e1mlo
+TMJ0190;Start-up ettevõtlus;Start-up Entrepreneurship;6;e2mlo
+TMJ0230;Ärilogistika ja varude juhtimine;Logistics and Inventory Management;6;p2mlo
 TMM2150;Turundus;Basic Marketing;6;p2mlo
 TMM2420;Turunduse juhtimine;Marketing Management;6;e1mlo
 TMM2420;Turunduse juhtimine;Marketing Management;6;e2mlo
 TMM2470;E-turundus;E-marketing;6;e1mlo
 TMM2470;E-turundus;E-marketing;6;e2mlo
-TMT2020;Tkeskkond ja ergonoomika;Working Environment and Ergonomics;6;ylmlo
+TMT2020;Töökeskkond ja ergonoomika;Working Environment and Ergonomics;6;ylmlo
 TSK0028;Majandusalane inglise keel II;Business English II;6;ylmlo
 TSK0326;Majandusalane inglise keel I;Business English I;6;ylmlo
 TSP0073;Rahvusvahelised suhted kaasajal;Contemporary International Relations;6;ylmlo
-UTT0120;Probleem- ja projektpe;Problem- and Project Based Learning;6;e1mlo
-UTT0120;Probleem- ja projektpe;Problem- and Project Based Learning;6;e2mlo
+UTT0120;Probleem- ja projektõpe;Problem- and Project Based Learning;6;e1mlo
+UTT0120;Probleem- ja projektõpe;Problem- and Project Based Learning;6;e2mlo
 YTM0071;Eluslooduse alused;Fundamentals of life;3;ylmlo`;
         courseData = parseCSV(courseText);
         
@@ -396,11 +396,9 @@ function displayMLOs(mlos) {
             const mloItem = document.createElement('div');
             mloItem.className = 'mlo-item';
             
-            // Remove quotation marks from MLO text
+            // Remove quotation marks and clean up the text
             let mloText = mlo.ilosisu;
-            if (mloText.startsWith('"') && mloText.endsWith('"')) {
-                mloText = mloText.substring(1, mloText.length - 1);
-            }
+            mloText = mloText.replace(/^["']|["']$/g, '').trim(); // Remove leading/trailing quotes
             
             mloItem.innerHTML = `
                 <h4>${moduleCode.toUpperCase()} ${index + 1}</h4>
