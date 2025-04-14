@@ -14,6 +14,20 @@ document.addEventListener('DOMContentLoaded', function() {
     setupEventListeners();
 });
 
+// Populate the datalist with course codes
+function populateCourseCodeAutocomplete() {
+    const datalist = document.getElementById('course-code-list');
+    datalist.innerHTML = ''; // Clear existing options
+
+    // Add unique course codes to the datalist
+    const uniqueCourseCodes = [...new Set(courseData.map(course => course.ainekood))];
+    uniqueCourseCodes.forEach(code => {
+        const option = document.createElement('option');
+        option.value = code;
+        datalist.appendChild(option);
+    });
+}
+
 // Load CSV data directly from embedded strings
 async function loadCSVData() {
     try {
@@ -133,10 +147,14 @@ e2mlo;moodul;"navigates the basic concepts of management and cost accounting, ca
 e2mlo;moodul;"analyzes practical financial issues, demonstrating a basic knowledge of the international financial system, services, and instruments;";Learning outcomes of the second Special studies module - E2 Finance and Accounting
 e2mlo;moodul;"understands the impact and challenges of the digital age on traditional accounting, can collect financial information from various company information systems, process, analyze, interpret it, and present it to company management;";Learning outcomes of the second Special studies module - E2 Finance and Accounting
 e2mlo;moodul;is familiar with the main research methods in econometrics and applies them in a practical context, handling quantitative analysis of economic problems.;Learning outcomes of the second Special studies module - E2 Finance and Accounting`;
+        courseData = parseCSV(courseText);
         mloData = parseCSV(mloText);
-        
+
         console.log('Data loaded successfully');
         document.getElementById('search-btn').disabled = false;
+
+        // Populate the autocomplete datalist
+        populateCourseCodeAutocomplete();
     } catch (error) {
         console.error('Error loading data:', error);
         showError('Failed to load data: ' + error.message);
@@ -198,9 +216,6 @@ function setupEventListeners() {
     
     // Export report button
     document.getElementById('export-report-btn').addEventListener('click', exportReport);
-
-    // Perform analysis on page load
-    searchCourse();
 }
 
 // Search for a course by code
@@ -251,9 +266,6 @@ function searchCourse() {
     
     // Show options panel
     showSection('options-panel');
-
-    // Perform analysis
-    performAnalysis();
 }
 
 // Validate course code format (3 letters followed by 4 digits)
@@ -812,15 +824,15 @@ function generateAlignmentReason(clo, mloText, score) {
     // Generate a reason based on the score
     switch (score) {
         case 1:
-            return `Very low alignment. The CLO and MLO address different topics with minimal overlap in content or skills. The CLO focuses on ${truncateText(clo, 30)}, while the MLO focuses on ${truncateText(mloText, 30)}.`;
+            return 'Very low alignment. The CLO and MLO address different topics with minimal overlap in content or skills.';
         case 2:
-            return `Low alignment. There is some topical overlap, but the CLO and MLO focus on different aspects or levels of learning. The CLO mentions ${truncateText(clo, 20)}, while the MLO mentions ${truncateText(mloText, 20)}.`;
+            return 'Low alignment. There is some topical overlap, but the CLO and MLO focus on different aspects or levels of learning.';
         case 3:
-            return `Moderate alignment. The CLO and MLO share some common themes and learning objectives, but could be more closely aligned. Both the CLO and MLO discuss aspects related to ${extractKeywords([clo, mloText].join(' '))[0]}.`;
+            return 'Moderate alignment. The CLO and MLO share some common themes and learning objectives, but could be more closely aligned.';
         case 4:
-            return `Good alignment. The CLO clearly supports the MLO with significant overlap in content and skills development. The CLO and MLO both emphasize ${extractKeywords([clo, mloText].join(' '))[0]} and ${extractKeywords([clo, mloText].join(' '))[1]}.`;
+            return 'Good alignment. The CLO clearly supports the MLO with significant overlap in content and skills development.';
         case 5:
-            return `Excellent alignment. The CLO directly supports and enhances the MLO with strong connections in both content and expected outcomes. The CLO and MLO are strongly aligned in their focus on ${extractKeywords([clo, mloText].join(' '))[0]}, ${extractKeywords([clo, mloText].join(' '))[1]}, and ${extractKeywords([clo, mloText].join(' '))[2]}.`;
+            return 'Excellent alignment. The CLO directly supports and enhances the MLO with strong connections in both content and expected outcomes.';
         default:
             return 'Unable to determine alignment.';
     }
