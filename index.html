@@ -79,7 +79,13 @@
                 <h2><i class="fas fa-edit"></i> Course Learning Outcomes</h2>
                 <div id="clo-container">
                     <div class="clo-input-container">
-                        <textarea id="clo-textarea" placeholder="Enter each Course Learning Outcome on a new line..."></textarea>
+                        <textarea id="clo-textarea" 
+                                  spellcheck="true"
+                                  data-language="en"
+                                  autocomplete="on"
+                                  autocorrect="on"
+                                  autocapitalize="sentences"
+                                  placeholder="Enter each Course Learning Outcome on a new line..."></textarea>
                         <button id="add-clo-btn">Add CLO</button>
                     </div>
                     <div id="clo-list"></div>
@@ -104,12 +110,12 @@
             <section id="report-section" class="hidden-section">
                 <h2><i class="fas fa-file-alt"></i> Alignment Report</h2>
                 <div id="report-container"></div>
-                <button id="export-report-btn" class="primary-btn">Export Report</button>
+                <!-- <button id="export-report-btn" class="primary-btn">Export Report</button> -->
             </section>
         </main>
 
         <footer>
-            <p>&copy; 2025 ILO Alignment AI | TalTech Majandusteaduskonna Siyi Ma</p>
+            <p>&copy; 2025 TVTB ILO Alignment | TalTech Majandusteaduskonna Siyi Ma</p>
         </footer>
     </div>
 

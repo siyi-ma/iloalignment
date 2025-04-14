@@ -12,6 +12,9 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Set up event listeners
     setupEventListeners();
+
+    // Initially hide home button on landing page
+    document.getElementById('home-btn').style.display = 'none';
 });
 
 // Populate the datalist with course codes and names
@@ -216,7 +219,46 @@ function setupEventListeners() {
     
     // Export report button
     document.getElementById('export-report-btn').addEventListener('click', exportReport);
+
+    // Language switch buttons
+    document.getElementById('lang-en').addEventListener('click', function() {
+        switchLanguage('en', 'Enter each Course Learning Outcome on a new line...');
+    });
+
+    document.getElementById('lang-et').addEventListener('click', function() {
+        switchLanguage('et', 'Sisesta iga õpiväljund uuele reale...');
+    });
 }
+
+// Add this function for language detection
+function detectLanguage(text) {
+    // Common Estonian words
+    const estonianWords = ['ja', 'ning', 'või', 'aga', 'kui', 'siis', 'et', 'on', 'oli', 'ole'];
+    
+    // Convert text to lowercase and split into words
+    const words = text.toLowerCase().split(/\s+/);
+    
+    // Count Estonian words
+    const estonianWordCount = words.filter(word => estonianWords.includes(word)).length;
+    
+    // If more than 10% of recognized words are Estonian, consider it Estonian
+    return (estonianWordCount / words.length) > 0.1 ? 'et' : 'en';
+}
+
+// Modify the textarea input handler
+document.getElementById('clo-textarea').addEventListener('input', function(e) {
+    const text = e.target.value;
+    if (text.trim().length > 0) {
+        const detectedLang = detectLanguage(text);
+        e.target.setAttribute('lang', detectedLang);
+        e.target.setAttribute('spellcheck', 'true');
+        
+        // Update placeholder based on detected language
+        e.target.placeholder = detectedLang === 'et' 
+            ? 'Sisesta iga õpiväljund uuele reale...'
+            : 'Enter each Course Learning Outcome on a new line...';
+    }
+});
 
 // Function to reset the app
 function resetApp() {
@@ -250,6 +292,9 @@ function resetApp() {
             section.classList.remove('active-section');
         }
     });
+
+    // Hide home button when returning to landing page
+    document.getElementById('home-btn').style.display = 'none';
 }
 
 // Search for a course by code
@@ -873,8 +918,18 @@ function generateReport(results) {
     // Create report header
     const reportHeader = `
         <div class="report-header">
-            <h3>Alignment Analysis Report</h3>
-            <p>${course.oppeainenimetusik} (${course.ainekood})</p>
+            <div class="report-title">
+                <h3>Alignment Analysis Report</h3>
+                <p>${course.oppeainenimetusik} (${course.ainekood})</p>
+            </div>
+            <div class="report-actions">
+                <button id="continue-editing-btn" class="primary-btn">
+                    <i class="fas fa-edit"></i> Continue Editing CLOs
+                </button>
+                <button id="export-report-btn" class="primary-btn">
+                    <i class="fas fa-file-export"></i> Export Report
+                </button>
+            </div>
         </div>
     `;
     reportContainer.innerHTML += reportHeader;
@@ -897,7 +952,6 @@ function generateReport(results) {
         if (!moduleGroups[moduleCode]) return; // Skip if module doesn't exist in results
 
         const moduleResults = moduleGroups[moduleCode];
-        const moduleName = moduleResults[0].mlo.oisnimetus;
         const moduleMLOs = currentMLOs.filter(mlo => mlo.moduleCode === moduleCode);
 
         const moduleTable = `
@@ -919,14 +973,8 @@ function generateReport(results) {
                             
                             return `
                             <tr>
-                                <td>
-                                    <strong>CLO ${result.cloIndex + 1}:</strong> 
-                                    ${result.clo}
-                                </td>
-                                <td>
-                                    <strong>${moduleCode.toUpperCase()} ${mloNumber}:</strong> 
-                                    ${result.mlo.ilosisu}
-                                </td>
+                                <td><strong>CLO ${result.cloIndex + 1}:</strong> ${result.clo}</td>
+                                <td><strong>${moduleCode.toUpperCase()} ${mloNumber}:</strong> ${result.mlo.ilosisu}</td>
                                 <td class="score-${result.score}">${result.score}/5</td>
                                 <td>${result.reason}</td>
                             </tr>
@@ -938,7 +986,237 @@ function generateReport(results) {
         reportContainer.innerHTML += moduleTable;
     });
 
+    // Add report footer
+    const reportFooter = `
+        <div class="report-footer">
+            <button id="continue-editing-bottom-btn" class="primary-btn">
+                <i class="fas fa-edit"></i> Continue Editing CLOs
+            </button>
+            <button id="export-report-btn" class="primary-btn">
+                <i class="fas fa-file-export"></i> Export Report
+            </button>
+        </div>
+    `;
+    reportContainer.innerHTML += reportFooter;
+
+    // Add event listeners for all export report buttons
+    document.querySelectorAll('#export-report-btn, [id^="export-report-btn"]').forEach(btn => {
+        // Remove existing listeners
+        const newBtn = btn.cloneNode(true);
+        btn.parentNode.replaceChild(newBtn, btn);
+        
+        // Add new listener
+        newBtn.addEventListener('click', function() {
+            const previewWindow = window.open('', '_blank');
+            const reportContent = generateExportContent(results);
+            previewWindow.document.write(reportContent);
+            previewWindow.document.close();
+        });
+    });
+
+    // Add event listeners for all continue editing buttons
+    document.querySelectorAll('#continue-editing-btn, #continue-editing-bottom-btn').forEach(btn => {
+        // Remove existing listeners
+        const newBtn = btn.cloneNode(true);
+        btn.parentNode.replaceChild(newBtn, btn);
+        
+        // Add new listener
+        newBtn.addEventListener('click', continueEditing);
+    });
+
     showSection('report-section');
+}
+
+// Move the export content generation to a separate function
+function generateExportContent(results) {
+    const course = currentCourses[0];
+    const currentDate = new Date().toISOString().split('T')[0];
+    
+    // Group results by module for organized display
+    const moduleGroups = {};
+    results.forEach(result => {
+        const moduleCode = result.mlo.moduleCode;
+        if (!moduleGroups[moduleCode]) {
+            moduleGroups[moduleCode] = [];
+        }
+        moduleGroups[moduleCode].push(result);
+    });
+
+    // Define module order
+    const moduleOrder = ['ylmlo', 'p1mlo', 'p2mlo', 'e1mlo', 'e2mlo', 'gdmlo'];
+    
+    return `
+        <html>
+        <head>
+            <title>TVTB ILO Alignment Report - ${course.ainekood}</title>
+            <style>
+                body { 
+                    font-family: Arial, sans-serif;
+                    padding: 40px;
+                    max-width: 1000px;
+                    margin: 0 auto;
+                    line-height: 1.6;
+                }
+                h3 { margin-top: 30px; }
+                table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin: 20px 0;
+                }
+                th, td {
+                    padding: 12px;
+                    border: 1px solid #ddd;
+                    text-align: left;
+                }
+                .module-section {
+                    margin-bottom: 30px;
+                    page-break-inside: avoid;
+                }
+                .mlo-list {
+                    margin: 20px 0;
+                    padding: 20px;
+                    background-color: #f8f9fa;
+                    border-radius: 4px;
+                }
+                .mlo-item {
+                    margin-bottom: 10px;
+                    padding-bottom: 10px;
+                    border-bottom: 1px solid #eee;
+                }
+                .mlo-item:last-child {
+                    border-bottom: none;
+                }
+                .print-controls {
+                    position: fixed;
+                    bottom: 20px;
+                    right: 20px;
+                    background: white;
+                    padding: 10px;
+                    border: 1px solid #ddd;
+                    border-radius: 4px;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                }
+                @media print {
+                    .print-controls { display: none; }
+                }
+            </style>
+        </head>
+        <body>
+            <h1>TVTB ILO Alignment Report</h1>
+            <h2>${course.ainekood} - ${course.oppeainenimetusik}</h2>
+            <p><strong>Generated:</strong> ${currentDate}</p>
+            
+            <div class="course-info">
+                <h3>Course Information</h3>
+                <table>
+                    <tr><td><strong>Course Code:</strong></td><td>${course.ainekood}</td></tr>
+                    <tr><td><strong>Name (EN):</strong></td><td>${course.oppeainenimetusik}</td></tr>
+                    <tr><td><strong>Name (ET):</strong></td><td>${course.oppeainenimetusek}</td></tr>
+                    <tr><td><strong>Credits:</strong></td><td>${course.eap} EAP</td></tr>
+                </table>
+            </div>
+
+            <div class="mlo-info">
+                <h3>Module Learning Outcomes</h3>
+                ${moduleOrder.map(moduleCode => {
+                    const moduleMLOs = currentMLOs.filter(mlo => mlo.moduleCode === moduleCode);
+                    if (moduleMLOs.length === 0) return '';
+                    
+                    return `
+                        <div class="mlo-list">
+                            <h4>${getModuleFullName(moduleCode)}</h4>
+                            ${moduleMLOs.map((mlo, index) => `
+                                <div class="mlo-item">
+                                    <strong>${moduleCode.toUpperCase()} ${index + 1}:</strong> ${mlo.ilosisu}
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+
+            <h3>Alignment Analysis</h3>
+            ${moduleOrder.map(moduleCode => {
+                if (!moduleGroups[moduleCode]) return '';
+                const moduleResults = moduleGroups[moduleCode];
+                const moduleMLOs = currentMLOs.filter(mlo => mlo.moduleCode === moduleCode);
+                
+                return `
+                    <div class="module-section">
+                        <h4>${getModuleFullName(moduleCode)}</h4>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>CLO</th>
+                                    <th>MLO</th>
+                                    <th>Score</th>
+                                    <th>Justification</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${moduleResults.map(result => {
+                                    const mloNumber = moduleMLOs.findIndex(mlo => 
+                                        mlo.ilosisu === result.mlo.ilosisu) + 1;
+                                    return `
+                                        <tr>
+                                            <td><strong>CLO ${result.cloIndex + 1}:</strong><br>${result.clo}</td>
+                                            <td><strong>${moduleCode.toUpperCase()} ${mloNumber}:</strong><br>${result.mlo.ilosisu}</td>
+                                            <td>${result.score}/5</td>
+                                            <td>${result.reason}</td>
+                                        </tr>
+                                    `;
+                                }).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            }).join('')}
+
+            <div class="print-controls">
+                <button onclick="window.print()" style="margin-right: 10px;">Save as PDF/Print</button>
+                <button onclick="window.close()">Close Preview</button>
+            </div>
+        </body>
+        </html>
+    `;
+}
+
+// Add the continue editing function
+function continueEditing() {
+    // Show the CLO input section
+    const cloInputSection = document.getElementById('clo-input');
+    document.querySelectorAll('section').forEach(section => {
+        section.classList.add('hidden-section');
+    });
+    cloInputSection.classList.remove('hidden-section');
+    
+    // Pre-fill the textarea with current CLOs
+    const cloTextarea = document.getElementById('clo-textarea');
+    const existingCLOs = currentCLOs.map(clo => clo.text || clo).join('\n');
+    cloTextarea.value = existingCLOs;
+    
+    // Update the CLO list display
+    const cloList = document.getElementById('clo-list');
+    cloList.innerHTML = ''; // Clear existing list
+    
+    // Re-add each CLO to the display
+    currentCLOs.forEach((clo, index) => {
+        const cloText = clo.text || clo;
+        const cloItem = document.createElement('div');
+        cloItem.className = 'clo-item';
+        cloItem.innerHTML = `
+            <span class="clo-text">${cloText}</span>
+            <div class="clo-actions">
+                <button onclick="editCLO(${index})" title="Edit">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button onclick="deleteCLO(${index})" title="Delete">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        `;
+        cloList.appendChild(cloItem);
+    });
 }
 
 // Helper function to get full module names
@@ -975,20 +1253,20 @@ function toggleText(element, fullText) {
     }
 }
 
-// Export report as PDF (simplified - would use a library in a real app)
-function exportReport() {
-    alert('In a production application, this would generate a PDF report for download.');
-    // In a real application, this would use a library like jsPDF or html2pdf
-}
-
 // Show a specific section and hide others
 function showSection(sectionId) {
-    // Don't hide course-info, mlo-display if they're already shown
     const keepVisible = ['course-info', 'mlo-display'];
+    const homeBtn = document.getElementById('home-btn');
+    
+    // Show/hide home button based on section
+    if (sectionId === 'course-input') {
+        homeBtn.style.display = 'none'; // Hide on landing page
+    } else {
+        homeBtn.style.display = 'block'; // Show on other pages
+    }
     
     document.querySelectorAll('section').forEach(section => {
         if (keepVisible.includes(section.id) && !section.classList.contains('hidden-section')) {
-            // Keep these sections visible if they're already shown
             return;
         }
         
@@ -1014,4 +1292,45 @@ function generateImprovedCLO(clo, mloText) {
         return `Revise the CLO to: "Develop proficiency in ${mloKeywords.join(', ')} and align with the MLO expectations."`;
     }
     return 'Revise the CLO to better align with the MLO themes and learning levels.';
+}
+
+// Email report
+function emailReport(results) {
+    if (confirm('This will open your Outlook. Do you want to continue?')) {
+        const course = currentCourses[0];
+        const currentDate = new Date().toISOString().split('T')[0];
+        
+        // Create email subject
+        const subject = `TVTB ILO Alignment: ${course.ainekood} ${course.oppeainenimetusik} (${currentDate})`;
+        
+        // Generate email body with report content
+        let body = `TVTB ILO Alignment Report\n`;
+        body += `${'-'.repeat(50)}\n\n`;
+        
+        // Course Information
+        body += `Course Information:\n`;
+        body += `Code: ${course.ainekood}\n`;
+        body += `Name (EN): ${course.oppeainenimetusik}\n`;
+        body += `Name (ET): ${course.oppeainenimetusek}\n`;
+        body += `Credits: ${course.eap} EAP\n\n`;
+        
+        // Module Information
+        const moduleCodes = [...new Set(currentCourses.map(c => c.moodlikood))];
+        body += `Modules: ${moduleCodes.join(', ').toUpperCase()}\n\n`;
+        
+        // CLOs and Alignments
+        body += `Analysis Results:\n${'-'.repeat(20)}\n\n`;
+        results.forEach((result, index) => {
+            body += `CLO ${result.cloIndex + 1}: ${result.clo}\n`;
+            body += `Aligned with ${result.mlo.moduleCode.toUpperCase()}\n`;
+            body += `Score: ${result.score}/5\n`;
+            body += `Reason: ${result.reason}\n\n`;
+        });
+        
+        body += `\nReport generated on ${currentDate}`;
+        
+        // Create mailto link with subject and body
+        const mailtoLink = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+        window.location.href = mailtoLink;
+    }
 }
