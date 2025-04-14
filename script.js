@@ -317,30 +317,11 @@ function displayCourseInfo(courses) {
     // Get all unique module codes
     const moduleCodes = [...new Set(courses.map(c => c.moodlikood))];
 
-    // Get module names for each module code
-    const moduleInfos = moduleCodes.map(code => {
-        const moduleMLO = mloData.find(mlo => mlo.moodlikood === code);
-        if (moduleMLO) {
-            return {
-                code: code.toUpperCase(),
-                name: moduleMLO.oisnimetus
-            };
-        }
-        return {
-            code: code.toUpperCase(),
-            name: 'Unknown Module'
-        };
-    });
-
-    // Create HTML for module codes and names
+    // Create comma-separated list of module codes in uppercase
     const moduleCodeElement = document.getElementById('module-code');
-    moduleCodeElement.innerHTML = '';
-    moduleInfos.forEach(moduleInfo => {
-        const moduleDiv = document.createElement('div');
-        moduleDiv.className = 'module-info-item';
-        moduleDiv.textContent = `${moduleInfo.code} - ${moduleInfo.name}`;
-        moduleCodeElement.appendChild(moduleDiv);
-    });
+    moduleCodeElement.textContent = moduleCodes
+        .map(code => code.toUpperCase().replace('MLO', ''))
+        .join(', ');
 
     // Show course info section
     showSection('course-info');
@@ -391,28 +372,23 @@ function displayMLOs(mlos) {
         moduleGroups[mlo.moduleCode].push(mlo);
     });
     
-    // Create a section for each module
-    Object.keys(moduleGroups).forEach(moduleCode => {
+    // Define module order
+    const moduleOrder = ['ylmlo', 'p1mlo', 'p2mlo', 'e1mlo', 'e2mlo', 'gdmlo'];
+    
+    // Create a section for each module in the specified order
+    moduleOrder.forEach(moduleCode => {
+        if (!moduleGroups[moduleCode]) return; // Skip if module doesn't exist
+        
         const moduleMLOs = moduleGroups[moduleCode];
-        
-        // Get module name from the first MLO's oisnimetus
-        const moduleName = moduleMLOs[0].oisnimetus;
-        
-        // Extract short module code (e.g., "E1", "P2")
-        const codeMatch = moduleCode.match(/([a-z]+)(\d*)/i);
-        let shortModuleCode = moduleCode.toUpperCase();
-        if (codeMatch && codeMatch.length > 2) {
-            shortModuleCode = codeMatch[1].toUpperCase() + codeMatch[2];
-        }
         
         // Create module section
         const moduleSection = document.createElement('div');
         moduleSection.className = 'module-section';
         
-        // Add module header with the full name from oisnimetus
+        // Add module header with the full name
         const moduleHeader = document.createElement('div');
         moduleHeader.className = 'module-header';
-        moduleHeader.innerHTML = `<h3>${moduleName}</h3>`;
+        moduleHeader.innerHTML = `<h3>${getModuleFullName(moduleCode)}</h3>`;
         moduleSection.appendChild(moduleHeader);
         
         // Add MLOs for this module
@@ -427,7 +403,7 @@ function displayMLOs(mlos) {
             }
             
             mloItem.innerHTML = `
-                <h4>${shortModuleCode} MLO ${index + 1}</h4>
+                <h4>${moduleCode.toUpperCase()} ${index + 1}</h4>
                 <p>${mloText}</p>
             `;
             moduleSection.appendChild(mloItem);
@@ -894,8 +870,16 @@ function generateReport(results) {
     const reportContainer = document.getElementById('report-container');
     reportContainer.innerHTML = '';
 
-    // Get the first course for common information
     const course = currentCourses[0];
+
+    // Create report header
+    const reportHeader = `
+        <div class="report-header">
+            <h3>Alignment Analysis Report</h3>
+            <p>${course.oppeainenimetusik} (${course.ainekood})</p>
+        </div>
+    `;
+    reportContainer.innerHTML += reportHeader;
 
     // Group results by module
     const moduleGroups = {};
@@ -907,26 +891,20 @@ function generateReport(results) {
         moduleGroups[moduleCode].push(result);
     });
 
-    // Sort module codes (e.g., E1, E2) in ascending order
-    const sortedModuleCodes = Object.keys(moduleGroups).sort();
+    // Define module order
+    const moduleOrder = ['ylmlo', 'p1mlo', 'p2mlo', 'e1mlo', 'e2mlo', 'gdmlo'];
 
-    // Create report header
-    const reportHeader = `
-        <div class="report-header">
-            <h3>Alignment Analysis Report</h3>
-            <p>${course.oppeainenimetusik} (${course.ainekood})</p>
-        </div>
-    `;
-    reportContainer.innerHTML += reportHeader;
+    // Generate report for each module in the specified order
+    moduleOrder.forEach(moduleCode => {
+        if (!moduleGroups[moduleCode]) return; // Skip if module doesn't exist in results
 
-    // Generate a table for each module
-    sortedModuleCodes.forEach(moduleCode => {
         const moduleResults = moduleGroups[moduleCode];
         const moduleName = moduleResults[0].mlo.oisnimetus;
+        const moduleMLOs = currentMLOs.filter(mlo => mlo.moduleCode === moduleCode);
 
         const moduleTable = `
             <div class="report-section">
-                <h4>Module: ${moduleName} (${moduleCode})</h4>
+                <h4>${getModuleFullName(moduleCode)}</h4>
                 <table class="report-table">
                     <thead>
                         <tr>
@@ -937,20 +915,24 @@ function generateReport(results) {
                         </tr>
                     </thead>
                     <tbody>
-                        ${moduleResults.map((result, index) => `
+                        ${moduleResults.map(result => {
+                            const mloNumber = moduleMLOs.findIndex(mlo => 
+                                mlo.ilosisu === result.mlo.ilosisu) + 1;
+                            
+                            return `
                             <tr>
                                 <td>
                                     <strong>CLO ${result.cloIndex + 1}:</strong> 
                                     ${result.clo}
                                 </td>
                                 <td>
-                                    <strong>${moduleCode.toUpperCase()} ${index + 1}:</strong> 
+                                    <strong>${moduleCode.toUpperCase()} ${mloNumber}:</strong> 
                                     ${result.mlo.ilosisu}
                                 </td>
                                 <td class="score-${result.score}">${result.score}/5</td>
-                                <td>${result.reason.replace('Moderate alignment. ', '')}</td>
+                                <td>${result.reason}</td>
                             </tr>
-                        `).join('')}
+                        `}).join('')}
                     </tbody>
                 </table>
             </div>
@@ -958,28 +940,20 @@ function generateReport(results) {
         reportContainer.innerHTML += moduleTable;
     });
 
-    // Comment out the "Improvement Suggestions" section
-    /*
-    const lowScoreResults = results.filter(result => result.score < 3);
-    if (lowScoreResults.length > 0) {
-        const suggestionsSection = `
-            <div class="report-section">
-                <h4>Improvement Suggestions</h4>
-                <ul>
-                    ${lowScoreResults.map(result => `
-                        <li>
-                            <strong>CLO ${result.cloIndex + 1}:</strong> ${generateImprovedCLO(result.clo, result.mlo.ilosisu)}
-                        </li>
-                    `).join('')}
-                </ul>
-            </div>
-        `;
-        reportContainer.innerHTML += suggestionsSection;
-    }
-    */
-
-    // Show report section
     showSection('report-section');
+}
+
+// Helper function to get full module names
+function getModuleFullName(moduleCode) {
+    const moduleNames = {
+        'ylmlo': 'General Studies Module - Foundational Competences (YL)',
+        'p1mlo': 'First Core Studies Module - P1 Methods, Markets and Economy',
+        'p2mlo': 'Second Core Studies Module - P2 Core Business Competences',
+        'e1mlo': 'First Special Studies Module - E1 Entrepreneurship and Marketing',
+        'e2mlo': 'Second Special Studies Module - E2 Finance and Accounting',
+        'gdmlo': 'Graduation Thesis Module (GD)'
+    };
+    return moduleNames[moduleCode] || moduleCode.toUpperCase();
 }
 
 // Truncate text to a certain length

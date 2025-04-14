@@ -43,19 +43,44 @@ header {
     box-shadow: var(--shadow);
 }
 
+/* Header Content */
 .header-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     text-align: center;
-    flex: 1;
+    gap: 10px; /* Space between the title and subtitle */
 }
 
+/* Header Text */
+.header-text {
+    display: flex;
+    flex-direction: column; /* Stack the title and subtitle vertically */
+    align-items: center; /* Center-align the text horizontally */
+    text-align: center; /* Ensure the text is centered */
+}
+
+/* Logo Style */
+.header-logo {
+    width: 50px; /* Adjust the size of the logo */
+    height: auto;
+}
+
+/* Header Title */
 header h1 {
     font-size: 2.5rem;
-    margin-bottom: 10px;
+    margin: 0;
+    color: var(--light-text);
+    display: flex;
+    align-items: center;
+    gap: 10px; /* Space between the icon and text */
 }
 
+/* Header Subtitle */
 header p {
     font-size: 1.2rem;
     opacity: 0.9;
+    color: var(--light-text);
 }
 
 .home-btn {
@@ -461,7 +486,6 @@ textarea:focus {
     padding: 12px 15px;
     text-align: left;
     border-bottom: 1px solid var(--secondary-color);
-    vertical-align: top; /* Align content to the top */
 }
 
 .report-table th {
