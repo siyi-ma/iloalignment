@@ -14,16 +14,16 @@ document.addEventListener('DOMContentLoaded', function() {
     setupEventListeners();
 });
 
-// Populate the datalist with course codes
+// Populate the datalist with course codes and names
 function populateCourseCodeAutocomplete() {
     const datalist = document.getElementById('course-code-list');
     datalist.innerHTML = ''; // Clear existing options
 
-    // Add unique course codes to the datalist
-    const uniqueCourseCodes = [...new Set(courseData.map(course => course.ainekood))];
-    uniqueCourseCodes.forEach(code => {
+    // Add unique course codes and names to the datalist
+    const uniqueCourses = [...new Set(courseData.map(course => `${course.ainekood} - ${course.oppeainenimetusik}`))];
+    uniqueCourses.forEach(course => {
         const option = document.createElement('option');
-        option.value = code;
+        option.value = course; // Format: "CourseCode - CourseName"
         datalist.appendChild(option);
     });
 }
@@ -196,8 +196,8 @@ function setupEventListeners() {
     // New course button
     document.getElementById('new-course-btn').addEventListener('click', resetToSearch);
     
-    // Suggest CLOs button
-    document.getElementById('suggest-clo-btn').addEventListener('click', suggestCLOs);
+    // Suggest CLOs button (commented out)
+    // document.getElementById('suggest-clo-btn').addEventListener('click', suggestCLOs);
     
     // Input CLOs button
     document.getElementById('input-clo-btn').addEventListener('click', showCLOInput);
@@ -225,30 +225,21 @@ function searchCourse() {
     // Get the value directly from the input field
     let courseCode = '';
     if (courseCodeInput && courseCodeInput.value) {
-        courseCode = courseCodeInput.value.trim().toUpperCase();
+        courseCode = courseCodeInput.value.trim();
     }
     
     const validationMessage = document.getElementById('validation-message');
     
     console.log("Searching for course code:", courseCode);
     
-    // Check if the course code is empty
-    if (!courseCode) {
-        validationMessage.textContent = 'Please enter a course code.';
-        return;
-    }
-    
-    // Validate course code format (3 letters followed by 4 digits)
-    if (!isValidCourseCode(courseCode)) {
-        validationMessage.textContent = 'Invalid course code. Please enter 3 letters followed by 4 digits (e.g., EKX0040).';
-        return;
-    }
-    
+    // Remove validation message logic
+    validationMessage.textContent = ''; // Clear any previous validation messages
+
     // Find course in data
-    const foundCourses = courseData.filter(course => course.ainekood === courseCode);
+    const foundCourses = courseData.filter(course => `${course.ainekood} - ${course.oppeainenimetusik}` === courseCode);
     
     if (foundCourses.length === 0) {
-        validationMessage.textContent = 'Course not found. Please check the course code and try again.';
+        validationMessage.textContent = 'Course not found. Please select a valid course from the list.';
         return;
     }
     
@@ -283,86 +274,47 @@ function isValidCourseCode(code) {
 function displayCourseInfo(courses) {
     // Use the first course for common information
     const course = courses[0];
-    
+
     document.getElementById('display-course-code').textContent = course.ainekood;
     document.getElementById('course-name-en').textContent = course.oppeainenimetusik;
     document.getElementById('course-name-et').textContent = course.oppeainenimetusek;
     document.getElementById('course-credits').textContent = course.eap;
-    
+
     // Get all unique module codes
     const moduleCodes = [...new Set(courses.map(c => c.moodlikood))];
-    
+
     // Get module names for each module code
     const moduleInfos = moduleCodes.map(code => {
         const moduleMLO = mloData.find(mlo => mlo.moodlikood === code);
         if (moduleMLO) {
-            // Extract module name from oisnimetus
-            const fullName = moduleMLO.oisnimetus;
-            // Find the module code in the oisnimetus (e.g., "E1", "P2")
-            const codeMatch = code.match(/([a-z]+)(\d*)/i);
-            if (codeMatch && codeMatch.length > 2) {
-                const shortCode = codeMatch[1].toUpperCase() + codeMatch[2];
-                // Try to extract the module name after the short code
-                const nameMatch = fullName.match(new RegExp(`${shortCode}\\s+([\\w\\s&-]+)`));
-                if (nameMatch && nameMatch.length > 1) {
-                    return {
-                        code: shortCode,
-                        name: nameMatch[1].trim(),
-                        fullName: fullName
-                    };
-                }
-                return {
-                    code: shortCode,
-                    name: fullName,
-                    fullName: fullName
-                };
-            }
             return {
-                code: code,
-                name: fullName,
-                fullName: fullName
+                code: code.toUpperCase(),
+                name: moduleMLO.oisnimetus
             };
         }
         return {
-            code: code,
-            name: code,
-            fullName: code
+            code: code.toUpperCase(),
+            name: 'Unknown Module'
         };
     });
-    
+
     // Create HTML for module codes and names
     const moduleCodeElement = document.getElementById('module-code');
     moduleCodeElement.innerHTML = '';
-    
-    // If there's only one module, display it as text
-    if (moduleInfos.length === 1) {
-        moduleCodeElement.textContent = `${moduleInfos[0].code} - ${moduleInfos[0].name}`;
-    } else {
-        // If there are multiple modules, display each on a new line
-        moduleInfos.forEach(moduleInfo => {
-            const moduleDiv = document.createElement('div');
-            moduleDiv.className = 'module-info-item';
-            moduleDiv.textContent = `${moduleInfo.code} - ${moduleInfo.name}`;
-            moduleCodeElement.appendChild(moduleDiv);
-        });
-    }
-    
+    moduleInfos.forEach(moduleInfo => {
+        const moduleDiv = document.createElement('div');
+        moduleDiv.className = 'module-info-item';
+        moduleDiv.textContent = `${moduleInfo.code} - ${moduleInfo.name}`;
+        moduleCodeElement.appendChild(moduleDiv);
+    });
+
     // Show course info section
     showSection('course-info');
-    
-    // Copy options panel after course info
-    const optionsPanel = document.getElementById('options-panel').cloneNode(true);
-    optionsPanel.id = 'options-panel-copy';
-    
-    // Add event listeners to the cloned buttons
-    optionsPanel.querySelector('#new-course-btn').addEventListener('click', resetToSearch);
-    optionsPanel.querySelector('#suggest-clo-btn').addEventListener('click', suggestCLOs);
-    optionsPanel.querySelector('#input-clo-btn').addEventListener('click', showCLOInput);
-    
-    // Insert the cloned options panel after course-info section
-    const courseInfoSection = document.getElementById('course-info');
-    courseInfoSection.parentNode.insertBefore(optionsPanel, courseInfoSection.nextSibling);
+
+    // Ensure options panel is visible
+    const optionsPanel = document.getElementById('options-panel');
     optionsPanel.classList.remove('hidden-section');
+    optionsPanel.classList.add('active-section');
 }
 
 // Retrieve MLOs based on module codes from all courses
@@ -456,41 +408,22 @@ function displayMLOs(mlos) {
 
 // Reset to search view
 function resetToSearch() {
-    // Clear current courses and MLOs
-    currentCourses = [];
-    currentMLOs = [];
+    // Clear current CLOs
     currentCLOs = [];
-    
-    // Clear course code input
-    document.getElementById('course-code').value = '';
-    document.getElementById('validation-message').textContent = '';
-    
-    // Hide all sections except course input
-    document.querySelectorAll('section').forEach(section => {
-        section.classList.add('hidden-section');
-        section.classList.remove('active-section');
-    });
-    
-    // Show course input section
-    document.getElementById('course-input').classList.remove('hidden-section');
-    document.getElementById('course-input').classList.add('active-section');
+
+    // Reset other UI elements
+    document.getElementById('clo-list').innerHTML = '';
+    document.getElementById('clo-textarea').value = '';
+    showSection('course-input');
 }
 
 // Show CLO input section
 function showCLOInput() {
-// Clear existing CLOs
-    currentCLOs = [
-        "describes basic terms, principles and legislation of circular economy",
-        "describes differences and impacts of circular and linear business models",
-        "describes material flows (from mining, processing, manufacturing to reusing and recycling)",
-        "analyses manufacturing processing accordingly to the principles of circular economy and sustainability",
-        "makes suggestions for applying more sustainable business models",
-        "describes different types of raw materials and their demand in different industries",
-        "values different materials used in the industry and everyday life and knows the importance of reusing and recycling in the context of sustainable economic development"
-    ];
+    // Clear current CLOs
+    currentCLOs = [];
     document.getElementById('clo-list').innerHTML = '';
     document.getElementById('clo-textarea').value = '';
-    
+
     // Show CLO input section
     showSection('clo-input');
 }
@@ -499,24 +432,25 @@ function showCLOInput() {
 function addCLO() {
     const cloTextarea = document.getElementById('clo-textarea');
     const cloText = cloTextarea.value.trim();
-    
+
     if (cloText === '') {
-        return;
+        return; // Do nothing if the input is empty
     }
-    
+
     // Split by new lines and add each as a CLO
     const cloLines = cloText.split('\n').filter(line => line.trim() !== '');
-    
+
     cloLines.forEach(line => {
         // Add to current CLOs
         currentCLOs.push(line);
-        
+
         // Add to display
         addCLOToDisplay(line);
     });
-    
+
     // Clear textarea
     cloTextarea.value = '';
+    console.log('Current CLOs:', currentCLOs);
 }
 
 // Add a CLO to the display
@@ -582,10 +516,10 @@ function deleteCLO(index) {
 function suggestCLOs() {
     // Generate suggestions based on course name and MLOs
     const suggestions = generateCLOSuggestions();
-    
-    // Display suggestions
+
+    // Display suggestions without modifying currentCLOs
     displayCLOSuggestions(suggestions);
-    
+
     // Show suggestions section
     showSection('clo-suggestions');
 }
@@ -656,23 +590,20 @@ function displayCLOSuggestions(suggestions) {
 
 // Use selected suggestions as CLOs
 function useSuggestions() {
-    // Clear current CLOs
-    currentCLOs = [];
-    
-    // Get all checked suggestions
+    // Clear current CLOs only if suggestions are explicitly used
     const checkboxes = document.querySelectorAll('.suggestion-checkbox:checked');
-    
+    if (checkboxes.length === 0) {
+        alert('Please select at least one suggestion.');
+        return;
+    }
+
+    // Replace currentCLOs with selected suggestions
+    currentCLOs = [];
     checkboxes.forEach(checkbox => {
         const label = checkbox.nextElementSibling.textContent;
         currentCLOs.push(label);
     });
-    
-    // If no suggestions selected, show message
-    if (currentCLOs.length === 0) {
-        alert('Please select at least one suggestion.');
-        return;
-    }
-    
+
     // Perform analysis with selected CLOs
     performAnalysis();
 }
@@ -725,8 +656,8 @@ function performAnalysis() {
 // Analyze alignment between CLOs and MLOs
 function analyzeAlignment() {
     const results = [];
-    
-    // For each CLO, find the best matching MLO and score the alignment
+
+    // Loop through user-input CLOs only
     currentCLOs.forEach((clo, cloIndex) => {
         let bestMatch = {
             mlo: null,
@@ -735,37 +666,34 @@ function analyzeAlignment() {
             reason: '',
             suggestion: ''
         };
-        
+
         // Compare with each MLO
         currentMLOs.forEach((mlo, mloIndex) => {
             const score = calculateAlignmentScore(clo, mlo.ilosisu);
             const reason = generateAlignmentReason(clo, mlo.ilosisu, score);
-            const suggestion = score < 3 ? generateImprovementSuggestion(clo, mlo.ilosisu) : '';
-            
+
             // If this is the best match so far, update bestMatch
             if (score > bestMatch.score) {
                 bestMatch = {
                     mlo: mlo,
                     mloIndex: mloIndex,
                     score: score,
-                    reason: reason,
-                    suggestion: suggestion
+                    reason: reason
                 };
             }
         });
-        
+
         // Add to results
         results.push({
-            clo: clo,
+            clo: clo, // Use the original CLO content from user input
             cloIndex: cloIndex,
             mlo: bestMatch.mlo,
             mloIndex: bestMatch.mloIndex,
             score: bestMatch.score,
-            reason: bestMatch.reason,
-            suggestion: bestMatch.suggestion
+            reason: bestMatch.reason
         });
     });
-    
+
     return results;
 }
 
@@ -821,18 +749,17 @@ function calculateAlignmentScore(clo, mloText) {
 
 // Generate reason for alignment score
 function generateAlignmentReason(clo, mloText, score) {
-    // Generate a reason based on the score
     switch (score) {
         case 1:
-            return 'Very low alignment. The CLO and MLO address different topics with minimal overlap in content or skills.';
+            return 'The CLO and MLO address different topics with minimal overlap in content or skills.';
         case 2:
-            return 'Low alignment. There is some topical overlap, but the CLO and MLO focus on different aspects or levels of learning.';
+            return 'There is some topical overlap, but the CLO and MLO focus on different aspects or levels of learning.';
         case 3:
-            return 'Moderate alignment. The CLO and MLO share some common themes and learning objectives, but could be more closely aligned.';
+            return 'The CLO and MLO share some common themes and learning objectives, but could be more closely aligned.';
         case 4:
-            return 'Good alignment. The CLO clearly supports the MLO with significant overlap in content and skills development.';
+            return 'The CLO clearly supports the MLO with significant overlap in content and skills development.';
         case 5:
-            return 'Excellent alignment. The CLO directly supports and enhances the MLO with strong connections in both content and expected outcomes.';
+            return 'The CLO directly supports and enhances the MLO with strong connections in both content and expected outcomes.';
         default:
             return 'Unable to determine alignment.';
     }
@@ -931,73 +858,92 @@ function displayAnalysisResults(results) {
 // Generate report
 function generateReport(results) {
     const reportContainer = document.getElementById('report-container');
-    
+    reportContainer.innerHTML = '';
+
     // Get the first course for common information
     const course = currentCourses[0];
-    
-    // Get all unique module codes
-    const moduleCodes = [...new Set(currentCourses.map(c => c.moodlikood))];
-    
-    // Calculate overall statistics
-    const totalScore = results.reduce((sum, result) => sum + result.score, 0);
-    const averageScore = (totalScore / results.length).toFixed(1);
-    const lowScoreCount = results.filter(result => result.score < 3).length;
-    
-    // Create report HTML
-    reportContainer.innerHTML = `
+
+    // Group results by module
+    const moduleGroups = {};
+    results.forEach(result => {
+        const moduleCode = result.mlo.moduleCode;
+        if (!moduleGroups[moduleCode]) {
+            moduleGroups[moduleCode] = [];
+        }
+        moduleGroups[moduleCode].push(result);
+    });
+
+    // Sort module codes (e.g., E1, E2) in ascending order
+    const sortedModuleCodes = Object.keys(moduleGroups).sort();
+
+    // Create report header
+    const reportHeader = `
         <div class="report-header">
             <h3>Alignment Analysis Report</h3>
             <p>${course.oppeainenimetusik} (${course.ainekood})</p>
         </div>
-        
-        <div class="report-section">
-            <h4>Summary</h4>
-            <p>Course: ${course.oppeainenimetusik} (${course.ainekood})</p>
-            <p>Modules: ${moduleCodes.join(', ')}</p>
-            <p>Number of CLOs: ${currentCLOs.length}</p>
-            <p>Number of MLOs: ${currentMLOs.length}</p>
-            <p>Average Alignment Score: ${averageScore}/5</p>
-            <p>CLOs Needing Improvement: ${lowScoreCount}</p>
-        </div>
-        
-        <div class="report-section">
-<h4>Alignment Scores</h4>
-            <table class="report-table">
-                <thead>
-                    <tr>
-                        <th>CLO</th>
-                        <th>Best Matching MLO</th>
-                        <th>Score</th>
-                        <th>Justification</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${results.map((result, index) => `
+    `;
+    reportContainer.innerHTML += reportHeader;
+
+    // Generate a table for each module
+    sortedModuleCodes.forEach(moduleCode => {
+        const moduleResults = moduleGroups[moduleCode];
+        const moduleName = moduleResults[0].mlo.oisnimetus;
+
+        const moduleTable = `
+            <div class="report-section">
+                <h4>Module: ${moduleName} (${moduleCode})</h4>
+                <table class="report-table">
+                    <thead>
                         <tr>
-                            <td>CLO ${index + 1}: ${truncateText(result.clo, 50)}</td>
-                            <td>MLO ${result.mloIndex + 1}: ${truncateText(result.mlo.ilosisu, 50)}</td>
-                            <td class="score-${result.score}">${result.score}/5</td>
-                            <td>${result.reason}</td>
+                            <th>CLO</th>
+                            <th>Best Matching MLO</th>
+                            <th>Score</th>
+                            <th>Justification</th>
                         </tr>
-                    `).join('')}
-                </tbody>
-            </table>
-        </div>
-        
-        ${lowScoreCount > 0 ? `
+                    </thead>
+                    <tbody>
+                        ${moduleResults.map((result, index) => `
+                            <tr>
+                                <td>
+                                    <strong>CLO ${result.cloIndex + 1}:</strong> 
+                                    ${result.clo}
+                                </td>
+                                <td>
+                                    <strong>${moduleCode.toUpperCase()} ${index + 1}:</strong> 
+                                    ${result.mlo.ilosisu}
+                                </td>
+                                <td class="score-${result.score}">${result.score}/5</td>
+                                <td>${result.reason.replace('Moderate alignment. ', '')}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
+        reportContainer.innerHTML += moduleTable;
+    });
+
+    // Comment out the "Improvement Suggestions" section
+    /*
+    const lowScoreResults = results.filter(result => result.score < 3);
+    if (lowScoreResults.length > 0) {
+        const suggestionsSection = `
             <div class="report-section">
                 <h4>Improvement Suggestions</h4>
                 <ul>
-                    ${results.filter(result => result.score < 3).map((result, index) => `
+                    ${lowScoreResults.map(result => `
                         <li>
-                            <strong>CLO ${result.cloIndex + 1}:</strong> ${result.suggestion}
+                            <strong>CLO ${result.cloIndex + 1}:</strong> ${generateImprovedCLO(result.clo, result.mlo.ilosisu)}
                         </li>
                     `).join('')}
                 </ul>
             </div>
-        ` : ''}
-    `;
-    
+        `;
+        reportContainer.innerHTML += suggestionsSection;
+    }
+    */
+
     // Show report section
     showSection('report-section');
 }
@@ -1008,6 +954,19 @@ function truncateText(text, maxLength) {
         return text;
     }
     return text.substring(0, maxLength) + '...';
+}
+
+// Toggle text display between truncated and full
+function toggleText(element, fullText) {
+    const parent = element.previousSibling;
+    const isTruncated = parent.textContent.endsWith('...');
+    if (isTruncated) {
+        parent.textContent = fullText;
+        element.textContent = 'Show less';
+    } else {
+        parent.textContent = truncateText(fullText, 50);
+        element.textContent = 'Show more';
+    }
 }
 
 // Export report as PDF (simplified - would use a library in a real app)
@@ -1040,4 +999,13 @@ function showSection(sectionId) {
 // Show error message
 function showError(message) {
     alert(message);
+}
+
+// Generate improved CLO based on MLO
+function generateImprovedCLO(clo, mloText) {
+    const mloKeywords = extractKeywords(mloText);
+    if (mloKeywords.length > 0) {
+        return `Revise the CLO to: "Develop proficiency in ${mloKeywords.join(', ')} and align with the MLO expectations."`;
+    }
+    return 'Revise the CLO to better align with the MLO themes and learning levels.';
 }

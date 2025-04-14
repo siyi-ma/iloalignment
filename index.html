@@ -114,5 +114,20 @@
     </div>
 
     <script src="script.js"></script>
+    <script>
+        // Populate the datalist with course codes and names
+        function populateCourseCodeAutocomplete() {
+            const datalist = document.getElementById('course-code-list');
+            datalist.innerHTML = ''; // Clear existing options
+
+            // Add unique course codes and names to the datalist
+            const uniqueCourses = [...new Set(courseData.map(course => `${course.ainekood} - ${course.oppeainenimetusik}`))];
+            uniqueCourses.forEach(course => {
+                const option = document.createElement('option');
+                option.value = course; // Format: "CourseCode - CourseName"
+                datalist.appendChild(option);
+            });
+        }
+    </script>
 </body>
 </html>
