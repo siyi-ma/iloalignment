@@ -1014,14 +1014,30 @@ function generateReport(results) {
         });
     });
 
-    // Add event listeners for all continue editing buttons
+    // Modify the event listeners for continue editing buttons
     document.querySelectorAll('#continue-editing-btn, #continue-editing-bottom-btn').forEach(btn => {
-        // Remove existing listeners
+        // Remove existing event listeners
         const newBtn = btn.cloneNode(true);
         btn.parentNode.replaceChild(newBtn, btn);
         
-        // Add new listener
-        newBtn.addEventListener('click', continueEditing);
+        // Add new event listener with proper function binding
+        newBtn.addEventListener('click', () => {
+            // Show the CLO input section
+            showSection('clo-input');
+            
+            // Pre-fill the textarea with current CLOs
+            const cloTextarea = document.getElementById('clo-textarea');
+            cloTextarea.value = currentCLOs.join('\n');
+            
+            // Update the CLO list display
+            const cloList = document.getElementById('clo-list');
+            cloList.innerHTML = ''; // Clear existing list
+            
+            // Re-add each CLO to the display
+            currentCLOs.forEach(clo => {
+                addCLOToDisplay(clo);
+            });
+        });
     });
 
     showSection('report-section');
